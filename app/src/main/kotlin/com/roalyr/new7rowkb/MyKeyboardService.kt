@@ -12,19 +12,23 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.content.IntentFilter
+import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.KeyCharacterMap
 import android.widget.Toast
 
-//import com.roalyr.new7rowkb.Keyboard
-//import com.roalyr.new7rowkb.KeyboardView
 
 class MyKeyboardService : InputMethodService() {
 
     private lateinit var windowManager: WindowManager
+    private lateinit var floatingKeyboardView: KeyboardView
     private lateinit var keyboardView: KeyboardView
+    private lateinit var placeholderView: KeyboardView
+    private lateinit var inputView: View
+
+
+    private var isFloating = true
 
     private val overlayPermissionReceiver = OverlayPermissionReceiver()
     private val handler = Handler(Looper.getMainLooper())
@@ -34,9 +38,10 @@ class MyKeyboardService : InputMethodService() {
     companion object {
         private const val ACTION_MANAGE_OVERLAY_PERMISSION = "android.settings.action.MANAGE_OVERLAY_PERMISSION"
         const val KEY_REPEAT_DELAY = 100L
-        const val KEYCODE_SPACE = 32
-        const val KEYCODE_ENTER = 10
-        const val KEYCODE_BACKSPACE = -5
+        const val KEYCODE_SPACE = 62
+        const val KEYCODE_ENTER = 66
+        const val KEYCODE_BACKSPACE = 67
+        const val KEYCODE_CLOSE_FLOATING_KEYBOARD = -10
     }
 
     ////////////////////////////////////////////
@@ -59,14 +64,89 @@ class MyKeyboardService : InputMethodService() {
     // Create the keyboard view
     override fun onCreateInputView(): View {
 
-        val inputView = layoutInflater.inflate(R.layout.input_view, null)
+        // First inflate the input view
+        inputView = layoutInflater.inflate(R.layout.input_view, null)
+
+        return if (isFloating) {
+            // Inflate a placeholder view for floating keyboard
+            placeholderView = inputView.findViewById(R.id.placeholder_view)
+
+            // Test this
+            // You might add a click listener here to show/hide the floating keyboard
+            placeholderView.setOnClickListener {
+                // Toggle floating keyboard visibility
+                if (floatingKeyboardView.visibility == View.VISIBLE) {
+                    floatingKeyboardView.visibility = View.GONE
+                } else {
+                    floatingKeyboardView.visibility = View.VISIBLE
+                }
+            }
+
+            // Inflate the floating keyboard
+            createFloatingKeyboard()
+
+            // Return input view with placeholder keyboard
+            inputView
+
+        } else {
+
+            // Inflate standard keyboard view
+            createStandardKeyboard()
+
+            // Return input view with standard keyboard
+            inputView
+
+        } // Else
+
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        checkAndRequestOverlayPermission()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(overlayPermissionReceiver)
+    }
+
+    ////////////////////////////////////////////
+    // Handle window creation and inflation
+    private fun createFloatingKeyboard() {
+        // Inflate the floating keyboard view and add layout
+        floatingKeyboardView = layoutInflater.inflate(R.layout.floating_keyboard_view, null) as KeyboardView
+        val keyboard = Keyboard(this, R.xml.keyboard)
+        floatingKeyboardView.keyboard = keyboard
+
+        // Initiate window manager params
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            PixelFormat.TRANSLUCENT
+        )
+        windowManager.addView(floatingKeyboardView, params)
+
+        // Listeners
+        setKeyboardActionListener(floatingKeyboardView)
+    }
+
+    private fun createStandardKeyboard() {
+        // Inflate the regular keyboard view and add layout
         keyboardView = inputView.findViewById(R.id.keyboard_view)
         val keyboard = Keyboard(this, R.xml.keyboard)
-        keyboardView.requestLayout()
         keyboardView.keyboard = keyboard
 
+        // Listeners
+        setKeyboardActionListener(keyboardView)
+    }
 
-        keyboardView.setOnKeyboardActionListener(object : KeyboardView.OnKeyboardActionListener {
+    ////////////////////////////////////////////
+    // Listeners
+    private fun setKeyboardActionListener(keyboardView: KeyboardView) {
+        keyboardView.onKeyboardActionListener = object : KeyboardView.OnKeyboardActionListener {
             override fun onKey(primaryCode: Int, keyCodes: IntArray?) {
                 if (!isBackspacePressed) { // Only handle non-repeating keys in onKey
                     handleKey(primaryCode, keyCodes)
@@ -77,7 +157,10 @@ class MyKeyboardService : InputMethodService() {
                 if (primaryCode == KEYCODE_BACKSPACE) {
                     isBackspacePressed = true
                     handler.postDelayed({
-                        handleKey(primaryCode, null) // Call handleKey directly for each repetition
+                        handleKey(
+                            primaryCode,
+                            null
+                        ) // Call handleKey directly for each repetition
                         onPress(primaryCode) // Recursively call onPress for repetition
                     }, KEY_REPEAT_DELAY)
                 }
@@ -110,27 +193,8 @@ class MyKeyboardService : InputMethodService() {
                 // Handle swipe up action (if needed)
             }
 
-            // ... other listener methods
-        })
-
-
-
-        return inputView
+        } // Listeners
     }
-
-    override fun onInitializeInterface() {
-        super.onInitializeInterface()
-        checkAndRequestOverlayPermission()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        unregisterReceiver(overlayPermissionReceiver)
-        if (this::keyboardView.isInitialized) {
-            windowManager.removeView(keyboardView)
-        }
-    }
-
 
     ////////////////////////////////////////////
     // Handle key events
@@ -141,6 +205,7 @@ class MyKeyboardService : InputMethodService() {
             KEYCODE_SPACE -> inputConnection.commitText(" ", 1)
             KEYCODE_ENTER -> inputConnection.commitText("\n", 1)
             KEYCODE_BACKSPACE -> inputConnection.deleteSurroundingText(1, 0)
+            KEYCODE_CLOSE_FLOATING_KEYBOARD -> closeFloatingKeyboard()
             else -> {
                 val isShiftLocked = false // Replace with your actual shift state logic
                 val codeToUse = keyCodes?.getOrNull(0) ?: primaryCode
@@ -163,7 +228,16 @@ class MyKeyboardService : InputMethodService() {
         // Logic to handle key release (if needed)
     }
 
-
+    ////////////////////////////////////////////
+    // Key events functions
+    private fun closeFloatingKeyboard() {
+        if (this::floatingKeyboardView.isInitialized) {
+            try {
+                windowManager.removeView(floatingKeyboardView)
+            } catch (e: Exception) {
+                Log.e("MyKeyboardService", "Error closing floating keyboard", e)            }
+        }
+    }
 
     ////////////////////////////////////////////
     // Ask for permission

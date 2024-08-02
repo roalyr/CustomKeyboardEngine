@@ -15,4 +15,17 @@
         app:keyTextColor="@color/key_text_color"
         app:shadowColor="@android:color/transparent"
         />
+
+    <com.roalyr.new7rowkb.KeyboardView xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/placeholder_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="visible"
+        android:background="@color/keyboard_background"
+        app:keyBackground="@drawable/key_background"
+        app:keyBackgroundModifier="@drawable/key_background_modifier"
+        app:keyTextColor="@color/key_text_color"
+        app:shadowColor="@android:color/transparent"
+        />
+
 </LinearLayout>

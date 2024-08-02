@@ -72,9 +72,9 @@
         <Key app:codes="46" app:keyLabel="." app:keyWidth="10%p" />
         <Key app:codes="63" app:keyLabel="@string/question_symbol" app:keyWidth="10%p" />
         <Key app:codes="33" app:keyLabel="!" app:keyWidth="10%p" />
-        <Key app:codes="32" app:keyLabel="space" app:keyWidth="30%p" />
-        <Key app:codes="10" app:keyLabel="ent" app:keyWidth="15%p" app:isModifier="true"/>
-        <Key app:codes="-5" app:keyLabel="bck" app:keyWidth="15%p" app:isModifier="true" app:keyEdgeFlags="right" />
+        <Key app:codes="62" app:keyLabel="space" app:keyWidth="30%p" />
+        <Key app:codes="66" app:keyLabel="ent" app:keyWidth="15%p" app:isModifier="true"/>
+        <Key app:codes="67" app:keyLabel="bck" app:keyWidth="15%p" app:isModifier="true" app:keyEdgeFlags="right" />
     </Row>
 
 

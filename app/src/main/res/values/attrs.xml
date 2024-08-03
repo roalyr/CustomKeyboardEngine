@@ -69,6 +69,12 @@
             <!-- Key is anchored to the right of the keyboard -->
             <flag name="right" value="2" />
         </attr>
+        <attr name="keyRowEdgeFlags">
+            <!-- Key is anchored to the left of the keyboard -->
+            <flag name="bottom" value="1" />
+            <!-- Key is anchored to the right of the keyboard -->
+            <flag name="top" value="2" />
+        </attr>
         <!-- Whether this is a modifier key such as Alt or Shift -->
         <attr name="isModifier" format="boolean" />
         <!-- Whether this is a toggle key -->
@@ -86,5 +92,7 @@
         <!-- Mode of the keyboard. If the mode doesn't match the
              requested keyboard mode, the key will be skipped -->
         <attr name="keyboardMode" />
+        <attr name="keyLabelSmall" format="string" />
+        <attr name="isCompound" format="boolean" />
     </declare-styleable>
 </resources>

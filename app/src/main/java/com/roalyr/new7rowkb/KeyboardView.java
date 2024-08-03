@@ -31,7 +31,6 @@ import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
-import android.media.AudioManager;
 import android.os.Handler;
 import android.os.Message;
 import android.util.AttributeSet;
@@ -44,8 +43,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup.LayoutParams;
-import android.view.accessibility.AccessibilityEvent;
-import android.view.accessibility.AccessibilityManager;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 import java.util.Arrays;
@@ -100,7 +97,7 @@ public class KeyboardView extends View implements View.OnClickListener {
          * These codes are useful to correct for accidental presses of a key adjacent to
          * the intended key.
          */
-        void onKey(int primaryCode, int[] keyCodes);
+        void onKey(int primaryCode, int[] keyCodes, CharSequence label);
         /**
          * Sends a sequence of characters to the listener.
          * @param text the sequence of characters to be displayed.
@@ -558,8 +555,8 @@ public class KeyboardView extends View implements View.OnClickListener {
             }
             setMeasuredDimension(width, mKeyboard.getHeight() + paddingTop + paddingBottom);
         }
-        Log.d("KeyboardView", "onMeasure: mKeyboard = " + mKeyboard);
-        Log.d("KeyboardView", "onMeasure: width = " + getMeasuredWidth() + ", height = " + getMeasuredHeight());
+        //Log.d("KeyboardView", "onMeasure: mKeyboard = " + mKeyboard);
+        //Log.d("KeyboardView", "onMeasure: width = " + getMeasuredWidth() + ", height = " + getMeasuredHeight());
     }
     /**
      * Compute the average distance between adjacent keys (horizontally and vertically)
@@ -679,7 +676,7 @@ public class KeyboardView extends View implements View.OnClickListener {
             if (label != null) {
                 // For characters, use large font. For labels like "Done", use small font.
                 if (label.length() > 1 && key.codes.length < 2) {
-                    paint.setTextSize((float) (key.height * 0.6));
+                    paint.setTextSize((float) (key.height * 0.4));
                     paint.setTypeface(Typeface.DEFAULT_BOLD);
                 } else {
                     paint.setTextSize((float) (key.height * 0.5));
@@ -746,32 +743,36 @@ public class KeyboardView extends View implements View.OnClickListener {
             if (isInside) {
                 primaryIndex = nearestKeyIndices[i];
             }
-            if (((mProximityCorrectOn
-                    && (dist = key.squaredDistanceFrom(x, y)) < mProximityThreshold)
-                    || isInside)
-                    && key.codes[0] > 32) {
-                // Find insertion point
-                final int nCodes = key.codes.length;
-                if (dist < closestKeyDist) {
-                    closestKeyDist = dist;
-                    closestKey = nearestKeyIndices[i];
-                }
-                if (allKeys == null) continue;
-                for (int j = 0; j < mDistances.length; j++) {
-                    if (mDistances[j] > dist) {
-                        // Make space for nCodes codes
-                        System.arraycopy(mDistances, j, mDistances, j + nCodes,
-                                mDistances.length - j - nCodes);
-                        System.arraycopy(allKeys, j, allKeys, j + nCodes,
-                                allKeys.length - j - nCodes);
-                        for (int c = 0; c < nCodes; c++) {
-                            allKeys[j + c] = key.codes[c];
-                            mDistances[j + c] = dist;
+
+            if (key.codes != null && key.codes.length > 0) {
+                if (((mProximityCorrectOn
+                        && (dist = key.squaredDistanceFrom(x, y)) < mProximityThreshold)
+                        || isInside)
+                        && key.codes[0] > 32) {
+                    // Find insertion point
+                    final int nCodes = key.codes.length;
+                    if (dist < closestKeyDist) {
+                        closestKeyDist = dist;
+                        closestKey = nearestKeyIndices[i];
+                    }
+                    if (allKeys == null) continue;
+                    for (int j = 0; j < mDistances.length; j++) {
+                        if (mDistances[j] > dist) {
+                            // Make space for nCodes codes
+                            System.arraycopy(mDistances, j, mDistances, j + nCodes,
+                                    mDistances.length - j - nCodes);
+                            System.arraycopy(allKeys, j, allKeys, j + nCodes,
+                                    allKeys.length - j - nCodes);
+                            for (int c = 0; c < nCodes; c++) {
+                                allKeys[j + c] = key.codes[c];
+                                mDistances[j + c] = dist;
+                            }
+                            break;
                         }
-                        break;
                     }
                 }
             }
+
         }
         if (primaryIndex == NOT_A_KEY) {
             primaryIndex = closestKey;
@@ -784,7 +785,7 @@ public class KeyboardView extends View implements View.OnClickListener {
             if (key.text != null) {
                 mKeyboardActionListener.onText(key.text);
                 mKeyboardActionListener.onRelease(NOT_A_KEY);
-            } else {
+            } else if (key.codes != null && key.codes.length > 0) {
                 int code = key.codes[0];
                 //TextEntryState.keyPressedAt(key, x, y);
                 int[] codes = new int[MAX_NEARBY_KEYS];
@@ -793,14 +794,17 @@ public class KeyboardView extends View implements View.OnClickListener {
                 // Multi-tap
                 if (mInMultiTap) {
                     if (mTapCount != -1) {
-                        mKeyboardActionListener.onKey(Keyboard.KEYCODE_DELETE, KEY_DELETE);
+                        mKeyboardActionListener.onKey(Keyboard.KEYCODE_DELETE, KEY_DELETE, "Del");
                     } else {
                         mTapCount = 0;
                     }
                     code = key.codes[mTapCount];
                 }
-                mKeyboardActionListener.onKey(code, codes);
+                mKeyboardActionListener.onKey(code, codes, key.label);
                 mKeyboardActionListener.onRelease(code);
+            } else if (key.codes == null || key.codes.length == 0) {
+                // When key has no code, just send the label
+                mKeyboardActionListener.onKey(NOT_A_KEY, null, key.label);
             }
             mLastSentIndex = index;
             mLastTapTime = eventTime;
@@ -998,8 +1002,8 @@ public class KeyboardView extends View implements View.OnClickListener {
                         R.id.closeButton);
                 if (closeButton != null) closeButton.setOnClickListener(this);
                 mMiniKeyboard.setOnKeyboardActionListener(new OnKeyboardActionListener() {
-                    public void onKey(int primaryCode, int[] keyCodes) {
-                        mKeyboardActionListener.onKey(primaryCode, keyCodes);
+                    public void onKey(int primaryCode, int[] keyCodes, CharSequence label) {
+                        mKeyboardActionListener.onKey(primaryCode, keyCodes, label);
                         dismissPopupKeyboard();
                     }
                     public void onText(CharSequence text) {
@@ -1138,8 +1142,11 @@ public class KeyboardView extends View implements View.OnClickListener {
                 mDownTime = me.getEventTime();
                 mLastMoveTime = mDownTime;
                 checkMultiTap(eventTime, keyIndex);
-                mKeyboardActionListener.onPress(keyIndex != NOT_A_KEY ?
-                        mKeys[keyIndex].codes[0] : 0);
+                // Todo: check if we have to pass the label here on empty codes
+                if (keyIndex >= 0 && mKeys[keyIndex].codes != null && mKeys[keyIndex].codes.length > 0) {
+                    mKeyboardActionListener.onPress(keyIndex != NOT_A_KEY ?
+                            mKeys[keyIndex].codes[0] : 0);
+                }
                 if (mCurrentKey >= 0 && mKeys[mCurrentKey].repeatable) {
                     mRepeatKeyIndex = mCurrentKey;
                     Message msg = mHandler.obtainMessage(MSG_REPEAT);

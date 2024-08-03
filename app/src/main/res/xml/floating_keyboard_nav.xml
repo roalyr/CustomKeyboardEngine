@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Keyboard xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:keyHeight="40dp"
+    app:horizontalGap="2dp"
+    app:verticalGap="2dp">
+
+    <Row >
+        <Key
+            app:keyLabel="Flt"
+            app:codes="-12"
+            app:isModifier="true"
+            app:keyEdgeFlags="left"
+            />
+        <Key
+            app:keyLabel="K2"
+            app:codes="0"
+            app:isModifier="true"
+            />
+        <Key
+            app:keyLabel="K3"
+            app:codes="0"
+            app:isModifier="true"
+            />
+        <Key
+            app:keyLabel="close"
+            app:keyWidth="50%p"
+            app:codes="-10"
+            app:isModifier="true"
+            />
+        <Key
+            app:keyLabel="open"
+            app:keyWidth="50%p"
+            app:codes="-11"
+            app:isModifier="true"
+            app:keyEdgeFlags="right"
+            />
+
+    </Row>
+</Keyboard>

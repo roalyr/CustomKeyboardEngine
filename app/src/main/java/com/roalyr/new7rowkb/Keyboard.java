@@ -778,18 +778,21 @@ public class Keyboard {
                         inKey = true;
                         key = createKeyFromXml(res, currentRow, x, y, parser);
                         mKeys.add(key);
-                        if (key != null && key.codes[0] == KEYCODE_SHIFT) {
-                            // Find available shift key slot and put this shift key in it
-                            for (int i = 0; i < mShiftKeys.length; i++) {
-                                if (mShiftKeys[i] == null) {
-                                    mShiftKeys[i] = key;
-                                    mShiftKeyIndices[i] = mKeys.size()-1;
-                                    break;
+
+                        if (key.codes != null && key.codes.length > 0) {
+                            if (key.codes[0] == KEYCODE_SHIFT) {
+                                // Find available shift key slot and put this shift key in it
+                                for (int i = 0; i < mShiftKeys.length; i++) {
+                                    if (mShiftKeys[i] == null) {
+                                        mShiftKeys[i] = key;
+                                        mShiftKeyIndices[i] = mKeys.size() - 1;
+                                        break;
+                                    }
                                 }
+                                mModifierKeys.add(key);
+                            } else if (key.codes[0] == KEYCODE_ALT) {
+                                mModifierKeys.add(key);
                             }
-                            mModifierKeys.add(key);
-                        } else if (key.codes[0] == KEYCODE_ALT) {
-                            mModifierKeys.add(key);
                         }
                         currentRow.mKeys.add(key);
                     } else if (TAG_KEYBOARD.equals(tag)) {

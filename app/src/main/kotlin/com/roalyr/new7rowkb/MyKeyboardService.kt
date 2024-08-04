@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.inputmethodservice.InputMethodService
 import android.net.Uri
@@ -20,16 +21,16 @@ import android.widget.Toast
 
 class MyKeyboardService : InputMethodService() {
 
-    private lateinit var windowManager: WindowManager // Always initialized in onCreate()
-    private var floatingKeyboardView: KeyboardView? = null // Can be null if not shown
-    private var keyboardView: KeyboardView? = null // Can be null if standard keyboard is not active
-    private var placeholderView: KeyboardView? = null // Can be null if floating keyboard is not active
-    private var inputView: View? = null // Can be null before creation or after closing
+    private lateinit var windowManager: WindowManager
+    private var floatingKeyboardView: KeyboardView? = null
+    private var keyboardView: KeyboardView? = null
+    private var placeholderView: KeyboardView? = null
+    private var inputView: View? = null
 
     private var isFloatingKeyboardOpen = false
     private var isFloatingKeyboard = false
+
     private var isReceiverRegistered = false
-    private var isFloating = false
 
     private val overlayPermissionReceiver = OverlayPermissionReceiver()
     private val handler = Handler(Looper.getMainLooper())
@@ -49,30 +50,18 @@ class MyKeyboardService : InputMethodService() {
 
     ////////////////////////////////////////////
     // Create the keyboard view
-    override fun onCreateInputView(): View? { // Return nullable view
-        // First inflate the input view
+    override fun onCreateInputView(): View? {
         createInputView()
-
-        val viewToReturn = if (isFloating) {
-            // Inflate the placeholder keyboard
+        return if (isFloatingKeyboard) {
             createPlaceholderKeyboard()
-
-            // Inflate the floating keyboard
             createFloatingKeyboard()
-
-            // Return input view with placeholder keyboard
             inputView
         } else {
-            // Inflate standard keyboard view
             createStandardKeyboard()
-
-            // Return input view with standard keyboard
             inputView
-        }
-        // Return the local variable, handling null case
-        return viewToReturn ?: run {
+        } ?: run {
             Log.e("MyKeyboardService", "Error creating input view")
-            null // Or throw an exception if appropriate
+            null
         }
     }
 
@@ -89,6 +78,11 @@ class MyKeyboardService : InputMethodService() {
         closeAllKeyboards()
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        // Close the floating keyboard before the input view is recreated
+        closeFloatingKeyboard()
+        super.onConfigurationChanged(newConfig)
+    }
 
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
@@ -111,10 +105,9 @@ class MyKeyboardService : InputMethodService() {
     // Handle window creation and inflation
     private fun createFloatingKeyboard() {
         floatingKeyboardView = layoutInflater.inflate(R.layout.floating_keyboard_view, null) as? KeyboardView
-        val keyboardView = floatingKeyboardView // Assign to a local variable
+        val keyboardView = floatingKeyboardView
         if (keyboardView != null) {
-            val keyboard = Keyboard(this, R.xml.keyboard)
-            keyboardView.keyboard = keyboard // Use the local variable
+            keyboardView.keyboard = Keyboard(this, R.xml.keyboard)
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -124,36 +117,31 @@ class MyKeyboardService : InputMethodService() {
                 PixelFormat.TRANSLUCENT
             )
 
-            if (::windowManager.isInitialized) {
-                windowManager.addView(floatingKeyboardView, params)
-            } else {
-                Log.e("MyKeyboardService", "Window Manager not initialized")
-            }
+            windowManager.addView(keyboardView, params)
 
-            setKeyboardActionListener(floatingKeyboardView!!)
+            setKeyboardActionListener(keyboardView)
             isFloatingKeyboardOpen = true
         } else {
             Log.e("MyKeyboardService", "Failed to inflate floating keyboard view")
         }
     }
 
-    private fun createStandardKeyboard(): View? { // Return the updated inputView
+    private fun createStandardKeyboard(): View? {
         val inputView = inputView
         if (inputView != null) {
             keyboardView = inputView.findViewById(R.id.keyboard_view)
             val keyboardView = keyboardView
             if (keyboardView != null) {
-                val keyboard = Keyboard(this, R.xml.keyboard)
-                keyboardView.keyboard = keyboard
+                keyboardView.keyboard = Keyboard(this, R.xml.keyboard)
                 setKeyboardActionListener(keyboardView)
-                return inputView // Return the updated inputView
+                return inputView
             } else {
                 Log.e("MyKeyboardService", "Keyboard view not found in input view")
             }
         } else {
             Log.e("MyKeyboardService", "Input view is null")
         }
-        return null // Return null if there was an error
+        return null
     }
 
     private fun createPlaceholderKeyboard(): View? {
@@ -162,17 +150,16 @@ class MyKeyboardService : InputMethodService() {
             placeholderView = inputView.findViewById(R.id.placeholder_view)
             val placeholderView = placeholderView
             if (placeholderView != null) {
-                val keyboard = Keyboard(this, R.xml.floating_keyboard_nav)
-                placeholderView.keyboard = keyboard
+                placeholderView.keyboard = Keyboard(this, R.xml.floating_keyboard_nav)
                 setKeyboardActionListener(placeholderView)
-                return inputView // Return the inputView
+                return inputView
             } else {
                 Log.e("MyKeyboardService", "Placeholder view not found in input view")
             }
         } else {
             Log.e("MyKeyboardService", "Input view is null")
         }
-        return null // Return null if there was an error
+        return null
     }
     
     private fun createInputView() {
@@ -186,15 +173,16 @@ class MyKeyboardService : InputMethodService() {
     }
 
     private fun closeFloatingKeyboard() {
-        if (floatingKeyboardView != null && ::windowManager.isInitialized) {
+        if (floatingKeyboardView != null && isFloatingKeyboardOpen && ::windowManager.isInitialized) {
             try {
                 windowManager.removeView(floatingKeyboardView)
+                isFloatingKeyboardOpen = false // Update the flag
             } catch (e: IllegalArgumentException) {
-                // View not attached to window manager
                 Log.e("MyKeyboardService", "Error closing floating keyboard: View not attached", e)
             } catch (e: Exception) {
-                // Other exceptions
                 Log.e("MyKeyboardService", "Error closing floating keyboard", e)
+            } finally {
+                floatingKeyboardView = null // Reset the view reference
             }
         }
     }
@@ -221,22 +209,28 @@ class MyKeyboardService : InputMethodService() {
     }
 
     private fun switchKeyboardMode() {
-        //Log.d("MyKeyboardService", "Switching keyboard mode")
-        closeAllKeyboards()
-        inputView = null
+        closeAllKeyboards() // Close any existing keyboards
 
-        if (isFloatingKeyboard) {
-            //Log.d("MyKeyboardService", "Creating floating keyboard")
+        isFloatingKeyboard = !isFloatingKeyboard // Toggle the keyboard mode
+
+        val newInputView = if (isFloatingKeyboard) {
             createInputView()
-            inputView = createPlaceholderKeyboard()
+            createPlaceholderKeyboard()
             createFloatingKeyboard()
+            inputView
         } else {
-            //Log.d("MyKeyboardService", "Creating standard keyboard")
             createInputView()
-            inputView = createStandardKeyboard()
+            createStandardKeyboard()
+            inputView
+
         }
-        isFloatingKeyboard = !isFloatingKeyboard
-        //Log.d("MyKeyboardService", "Keyboard mode switched, isFloatingKeyboard: $isFloatingKeyboard")
+
+        if (newInputView != null) {
+            inputView = newInputView
+            setInputView(newInputView) // Update the input view
+        } else {
+            Log.e("MyKeyboardService", "Error creating new input view")
+        }
     }
 
     ////////////////////////////////////////////

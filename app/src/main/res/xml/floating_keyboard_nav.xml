@@ -12,24 +12,37 @@
             app:keyEdgeFlags="left"
             />
         <Key
-            app:keyLabel="K2"
-            app:codes="0"
-            app:isModifier="true"
+            app:keyLabel="+"
+            app:codes="-13"
+            app:isModifier="false"
             />
         <Key
-            app:keyLabel="K3"
-            app:codes="0"
-            app:isModifier="true"
+            app:keyLabel="-"
+            app:codes="-14"
+            app:isModifier="false"
+
+            />
+        <Key
+            app:keyLabel="L"
+            app:codes="-17"
+            app:isModifier="false"
+            app:isRepeatable="false"
+
+            />
+        <Key
+            app:keyLabel="R"
+            app:codes="-18"
+            app:isModifier="false"
+            app:isRepeatable="false"
+
             />
         <Key
             app:keyLabel="close"
-            app:keyWidth="50%p"
             app:codes="-10"
             app:isModifier="true"
             />
         <Key
             app:keyLabel="open"
-            app:keyWidth="50%p"
             app:codes="-11"
             app:isModifier="true"
             app:keyEdgeFlags="right"

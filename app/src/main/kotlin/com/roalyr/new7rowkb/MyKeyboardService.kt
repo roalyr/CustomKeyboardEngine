@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -29,6 +30,11 @@ class MyKeyboardService : InputMethodService() {
 
     private var isFloatingKeyboardOpen = false
     private var isFloatingKeyboard = false
+    private var floatingKeyboardWidth: Int = 0
+    private var floatingKeyboardPosX: Int = 0
+    private var floatingKeyboardPosY: Int = 0
+
+    private var screenWidth: Int = 0
 
     private var isReceiverRegistered = false
 
@@ -39,6 +45,9 @@ class MyKeyboardService : InputMethodService() {
 
     companion object {
         private const val ACTION_MANAGE_OVERLAY_PERMISSION = "android.settings.action.MANAGE_OVERLAY_PERMISSION"
+        const val KEYBOARD_MINIMAL_WIDTH = 500
+        const val KEYBOARD_TRANSLATION_INCREMENT = 50
+        const val KEYBOARD_SCALE_INCREMENT = 50
         const val KEY_REPEAT_DELAY = 100L
         const val KEYCODE_SPACE = 62
         const val KEYCODE_ENTER = 66
@@ -46,11 +55,27 @@ class MyKeyboardService : InputMethodService() {
         const val KEYCODE_CLOSE_FLOATING_KEYBOARD = -10
         const val KEYCODE_OPEN_FLOATING_KEYBOARD = -11
         const val KEYCODE_SWITCH_KEYBOARD_MODE = -12
+        const val KEYCODE_ENLARGE_FLOATING_KEYBOARD = -13
+        const val KEYCODE_SHRINK_FLOATING_KEYBOARD = -14
+        const val KEYCODE_ENLARGE_FLOATING_KEYBOARD_VERT = -15
+        const val KEYCODE_SHRINK_FLOATING_KEYBOARD_VERT = -16
+        const val KEYCODE_MOVE_FLOATING_KEYBOARD_LEFT = -17
+        const val KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT = -18
     }
 
+
     ////////////////////////////////////////////
-    // Create the keyboard view
+    // Init the keyboard
     override fun onCreateInputView(): View? {
+        // Check width to prevent keyboard from crossing screen
+        screenWidth = getScreenWidth()
+        if (floatingKeyboardWidth == 0) {
+            floatingKeyboardWidth = screenWidth
+        }
+        if (floatingKeyboardWidth > screenWidth) {
+            floatingKeyboardWidth = screenWidth
+        }
+
         createInputView()
         return if (isFloatingKeyboard) {
             createPlaceholderKeyboard()
@@ -100,18 +125,25 @@ class MyKeyboardService : InputMethodService() {
     }
 
 
-
     ////////////////////////////////////////////
     // Handle window creation and inflation
     private fun createFloatingKeyboard() {
-        floatingKeyboardView = layoutInflater.inflate(R.layout.floating_keyboard_view, null) as? KeyboardView
+
+        inputView?.findViewById<View>(R.id.placeholder_view)?.requestFocus()
+
+        // Check screen width every time to keep window size within
+        screenWidth = getScreenWidth()
+        floatingKeyboardView =
+            layoutInflater.inflate(R.layout.floating_keyboard_view, null) as? KeyboardView
         val keyboardView = floatingKeyboardView
         if (keyboardView != null) {
             keyboardView.keyboard = Keyboard(this, R.xml.keyboard)
 
             val params = WindowManager.LayoutParams(
+                floatingKeyboardWidth,
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
+                floatingKeyboardPosX,
+                floatingKeyboardPosY,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT
@@ -163,6 +195,7 @@ class MyKeyboardService : InputMethodService() {
     }
     
     private fun createInputView() {
+        inputView = null
         inputView = layoutInflater.inflate(R.layout.input_view, null)
     }
 
@@ -234,6 +267,38 @@ class MyKeyboardService : InputMethodService() {
     }
 
     ////////////////////////////////////////////
+    // Handle floating window size and position
+    private fun resizeFloatingKeyboard(increment: Int) {
+        if (floatingKeyboardView != null && isFloatingKeyboardOpen) {
+            floatingKeyboardWidth += increment
+            floatingKeyboardWidth = floatingKeyboardWidth.coerceIn(KEYBOARD_MINIMAL_WIDTH,screenWidth)
+            closeFloatingKeyboard()
+            createFloatingKeyboard()
+        }
+    }
+
+    // Translation
+    private fun translateFloatingKeyboard(xOffset: Int) {
+        if (floatingKeyboardView != null && isFloatingKeyboardOpen) {
+            floatingKeyboardPosX += xOffset
+            floatingKeyboardPosX = floatingKeyboardPosX.coerceIn(-(screenWidth - floatingKeyboardWidth), (screenWidth - floatingKeyboardWidth))
+            closeFloatingKeyboard()
+            createFloatingKeyboard()
+        }
+    }
+
+    private fun getScreenWidth(): Int {
+        val displayMetrics = DisplayMetrics()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            display?.getRealMetrics(displayMetrics)
+        } else {
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.getMetrics(displayMetrics)
+        }
+        return displayMetrics.widthPixels
+    }
+
+    ////////////////////////////////////////////
     // Listeners
     private fun setKeyboardActionListener(keyboardView: KeyboardView) {
         keyboardView.onKeyboardActionListener = object : KeyboardView.OnKeyboardActionListener {
@@ -297,16 +362,18 @@ class MyKeyboardService : InputMethodService() {
             KEYCODE_CLOSE_FLOATING_KEYBOARD -> {
                 if (isFloatingKeyboardOpen) {
                     closeFloatingKeyboard()
-                    isFloatingKeyboardOpen = false
                 }
             }
             KEYCODE_OPEN_FLOATING_KEYBOARD -> {
                 if (!isFloatingKeyboardOpen) {
                     createFloatingKeyboard()
-                    isFloatingKeyboardOpen = true
                 }
             }
             KEYCODE_SWITCH_KEYBOARD_MODE -> switchKeyboardMode()
+            KEYCODE_ENLARGE_FLOATING_KEYBOARD -> resizeFloatingKeyboard(+KEYBOARD_SCALE_INCREMENT)
+            KEYCODE_SHRINK_FLOATING_KEYBOARD -> resizeFloatingKeyboard(-KEYBOARD_SCALE_INCREMENT)
+            KEYCODE_MOVE_FLOATING_KEYBOARD_LEFT -> translateFloatingKeyboard(-KEYBOARD_TRANSLATION_INCREMENT)
+            KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT -> translateFloatingKeyboard(KEYBOARD_TRANSLATION_INCREMENT)
 
             // Ignore key codes for all other keys and commit their labels
             else -> {

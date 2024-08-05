@@ -31,10 +31,12 @@ class MyKeyboardService : InputMethodService() {
     private var isFloatingKeyboardOpen = false
     private var isFloatingKeyboard = false
     private var floatingKeyboardWidth: Int = 0
+    private var floatingKeyboardHeight: Int = 0
     private var floatingKeyboardPosX: Int = 0
     private var floatingKeyboardPosY: Int = 0
 
     private var screenWidth: Int = 0
+    private var screenHeight: Int = 0
 
     private var isReceiverRegistered = false
 
@@ -45,8 +47,11 @@ class MyKeyboardService : InputMethodService() {
 
     companion object {
         private const val ACTION_MANAGE_OVERLAY_PERMISSION = "android.settings.action.MANAGE_OVERLAY_PERMISSION"
+        const val NAV_BAR_HEIGHT_PLACEHOLDER = 135 // In order to not cover the nav bar
         const val KEYBOARD_MINIMAL_WIDTH = 500
+        const val KEYBOARD_MINIMAL_HEIGHT = 500
         const val KEYBOARD_TRANSLATION_INCREMENT = 50
+        const val KEYBOARD_TRANSLATION_BOTTOM_OFFSET = 40 // dp
         const val KEYBOARD_SCALE_INCREMENT = 50
         const val KEY_REPEAT_DELAY = 100L
         const val KEYCODE_SPACE = 62
@@ -61,6 +66,8 @@ class MyKeyboardService : InputMethodService() {
         const val KEYCODE_SHRINK_FLOATING_KEYBOARD_VERT = -16
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_LEFT = -17
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT = -18
+        const val KEYCODE_MOVE_FLOATING_KEYBOARD_UP = -19
+        const val KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN = -20
     }
 
 
@@ -69,12 +76,21 @@ class MyKeyboardService : InputMethodService() {
     override fun onCreateInputView(): View? {
         // Check width to prevent keyboard from crossing screen
         screenWidth = getScreenWidth()
+        screenHeight = getScreenHeight()
+
         if (floatingKeyboardWidth == 0) {
             floatingKeyboardWidth = screenWidth
         }
         if (floatingKeyboardWidth > screenWidth) {
             floatingKeyboardWidth = screenWidth
         }
+
+        /*if (floatingKeyboardHeight == 0) {
+            floatingKeyboardHeight = screenHeight // TODO?
+        }
+        if (floatingKeyboardHeight > screenHeight) {
+            floatingKeyboardHeight = screenHeight
+        }*/
 
         createInputView()
         return if (isFloatingKeyboard) {
@@ -105,6 +121,7 @@ class MyKeyboardService : InputMethodService() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         // Close the floating keyboard before the input view is recreated
+        // TODO: make sure the window is properly bounded.
         closeFloatingKeyboard()
         super.onConfigurationChanged(newConfig)
     }
@@ -281,7 +298,43 @@ class MyKeyboardService : InputMethodService() {
     private fun translateFloatingKeyboard(xOffset: Int) {
         if (floatingKeyboardView != null && isFloatingKeyboardOpen) {
             floatingKeyboardPosX += xOffset
-            floatingKeyboardPosX = floatingKeyboardPosX.coerceIn(-(screenWidth - floatingKeyboardWidth), (screenWidth - floatingKeyboardWidth))
+            floatingKeyboardPosX = floatingKeyboardPosX.coerceIn(-(screenWidth/2 - floatingKeyboardWidth/2),
+                (screenWidth/2 - floatingKeyboardWidth/2))
+            closeFloatingKeyboard()
+            createFloatingKeyboard()
+        }
+    }
+
+    private fun translateVertFloatingKeyboard(yOffset: Int) {
+        if (floatingKeyboardView != null && isFloatingKeyboardOpen) {
+            floatingKeyboardPosY += yOffset
+
+            // Get the height of the floating keyboard
+            floatingKeyboardView!!.measure(
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            )
+            floatingKeyboardHeight = floatingKeyboardView!!.measuredHeight
+
+            // Get the height of bottom nav bar (or use placeholder assumption value)
+            var navigationBarHeight = 0
+            val resourceId = resources.getIdentifier("navigation_bar_height", "dimen", "android")
+            if (resourceId > 0) {
+                navigationBarHeight = resources.getDimensionPixelSize(resourceId)
+            } else {
+                navigationBarHeight = NAV_BAR_HEIGHT_PLACEHOLDER
+            }
+
+            // get pixel density to convert dp to px
+            val density = resources.displayMetrics.density
+            val bottomOffsetPixels = KEYBOARD_TRANSLATION_BOTTOM_OFFSET * density
+
+            // Keep some space in the bottom
+            floatingKeyboardPosY = floatingKeyboardPosY.coerceIn(
+                -(screenHeight/2 - floatingKeyboardHeight/2),
+                ((screenHeight/2 - floatingKeyboardHeight/2 - bottomOffsetPixels - navigationBarHeight).toInt())
+            )
+
             closeFloatingKeyboard()
             createFloatingKeyboard()
         }
@@ -296,6 +349,17 @@ class MyKeyboardService : InputMethodService() {
             windowManager.defaultDisplay.getMetrics(displayMetrics)
         }
         return displayMetrics.widthPixels
+    }
+
+    private fun getScreenHeight(): Int {
+        val displayMetrics = DisplayMetrics()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            display?.getRealMetrics(displayMetrics)
+        } else {
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.getMetrics(displayMetrics)
+        }
+        return displayMetrics.heightPixels
     }
 
     ////////////////////////////////////////////
@@ -374,6 +438,9 @@ class MyKeyboardService : InputMethodService() {
             KEYCODE_SHRINK_FLOATING_KEYBOARD -> resizeFloatingKeyboard(-KEYBOARD_SCALE_INCREMENT)
             KEYCODE_MOVE_FLOATING_KEYBOARD_LEFT -> translateFloatingKeyboard(-KEYBOARD_TRANSLATION_INCREMENT)
             KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT -> translateFloatingKeyboard(KEYBOARD_TRANSLATION_INCREMENT)
+            KEYCODE_MOVE_FLOATING_KEYBOARD_UP -> translateVertFloatingKeyboard(-KEYBOARD_TRANSLATION_INCREMENT)
+            KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN -> translateVertFloatingKeyboard(KEYBOARD_TRANSLATION_INCREMENT)
+
 
             // Ignore key codes for all other keys and commit their labels
             else -> {

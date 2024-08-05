@@ -37,6 +37,20 @@
 
             />
         <Key
+            app:keyLabel="U"
+            app:codes="-19"
+            app:isModifier="false"
+            app:isRepeatable="false"
+
+            />
+        <Key
+            app:keyLabel="D"
+            app:codes="-20"
+            app:isModifier="false"
+            app:isRepeatable="false"
+
+            />
+        <Key
             app:keyLabel="close"
             app:codes="-10"
             app:isModifier="true"

@@ -14,6 +14,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -43,7 +44,10 @@ class MyKeyboardService : InputMethodService() {
     private val overlayPermissionReceiver = OverlayPermissionReceiver()
     private val handler = Handler(Looper.getMainLooper())
 
-    private var isBackspacePressed = false
+    private var isShiftPressed = false
+    private var isCtrlPressed = false
+    private var isAltPressed = false
+    private var isCapsPressed = false
 
     companion object {
         private const val ACTION_MANAGE_OVERLAY_PERMISSION = "android.settings.action.MANAGE_OVERLAY_PERMISSION"
@@ -53,10 +57,7 @@ class MyKeyboardService : InputMethodService() {
         const val KEYBOARD_TRANSLATION_INCREMENT = 50
         const val KEYBOARD_TRANSLATION_BOTTOM_OFFSET = 40 // dp
         const val KEYBOARD_SCALE_INCREMENT = 50
-        const val KEY_REPEAT_DELAY = 100L
-        const val KEYCODE_SPACE = 62
-        const val KEYCODE_ENTER = 66
-        const val KEYCODE_BACKSPACE = 67
+        const val NOT_A_KEY = -1
         const val KEYCODE_CLOSE_FLOATING_KEYBOARD = -10
         const val KEYCODE_OPEN_FLOATING_KEYBOARD = -11
         const val KEYCODE_SWITCH_KEYBOARD_MODE = -12
@@ -125,7 +126,6 @@ class MyKeyboardService : InputMethodService() {
         closeFloatingKeyboard()
         super.onConfigurationChanged(newConfig)
     }
-
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
@@ -362,31 +362,82 @@ class MyKeyboardService : InputMethodService() {
         return displayMetrics.heightPixels
     }
 
+
+
+
     ////////////////////////////////////////////
     // Listeners
     private fun setKeyboardActionListener(keyboardView: KeyboardView) {
         keyboardView.onKeyboardActionListener = object : KeyboardView.OnKeyboardActionListener {
+
+            private var metaState = 0 // Combined meta state
+
             override fun onKey(primaryCode: Int, keyCodes: IntArray?, label: CharSequence?) {
-                if (!isBackspacePressed) { // Only handle non-repeating keys in onKey
-                    handleKey(primaryCode, keyCodes, label)
+                // Intercept key events and update metaState
+                when (primaryCode) {
+                    KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> {
+                        // Toggle Shift
+                        metaState = if (isShiftPressed) {
+                            metaState and KeyEvent.META_SHIFT_ON.inv()
+                        } else {
+                            metaState or KeyEvent.META_SHIFT_ON
+                        }
+                        isShiftPressed = !isShiftPressed
+                    }
+                    KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT -> {
+                        // Toggle Ctrl
+                        metaState = if (isCtrlPressed) {
+                            metaState and KeyEvent.META_CTRL_ON.inv()
+                        } else {
+                            metaState or KeyEvent.META_CTRL_ON
+                        }
+                        isCtrlPressed = !isCtrlPressed
+                    }
+                    KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT -> {
+                        // Toggle Alt
+                        metaState = if (isAltPressed) {
+                            metaState and KeyEvent.META_ALT_ON.inv()
+                        } else {
+                            metaState or KeyEvent.META_ALT_ON
+                        }
+                        isAltPressed = !isAltPressed
+                    }
+                    KeyEvent.KEYCODE_CAPS_LOCK -> {
+                        // Toggle Caps
+                        isCapsPressed = !isCapsPressed
+                    }
+
+                    else -> {
+                        // Modify metaState for injected events
+                        val modifiedMetaState = if (isCapsPressed) {
+                            metaState or KeyEvent.META_CAPS_LOCK_ON
+                        } else {
+                            metaState
+                        }
+                        // Manually apply metaState to the key event
+                        val modifiedEvent = KeyEvent(0, 0, KeyEvent.ACTION_DOWN,
+                            primaryCode, 0, modifiedMetaState)
+
+                        // Inject the modified key event
+                        currentInputConnection?.sendKeyEvent(modifiedEvent) // Use stored InputConnection
+
+                        // Reset metaState after other keys (except modifiers)
+                        metaState = 0 // Reset meta state
+                        isShiftPressed = false // Reset Shift state
+                        isCtrlPressed = false // Reset Ctrl state
+                        isAltPressed = false // Reset Alt state
+                    }
                 }
+
+                handleKey(primaryCode, keyCodes, label) // Call handleKey here
             }
 
             override fun onPress(primaryCode: Int) {
-                if (primaryCode == KEYCODE_BACKSPACE) {
-                    isBackspacePressed = true
-                    handler.postDelayed({
-                        handleKey(primaryCode,null, null) // Call handleKey directly for each repetition
-                        onPress(primaryCode) // Recursively call onPress for repetition
-                    }, KEY_REPEAT_DELAY)
-                }
+                // No need to handle key repetition here, KeyboardView does it
             }
 
             override fun onRelease(primaryCode: Int) {
-                if (primaryCode == KEYCODE_BACKSPACE) {
-                    isBackspacePressed = false
-                    handler.removeCallbacksAndMessages(null)
-                }
+                // No need to handle key repetition here, KeyboardView does it
             }
 
             override fun onText(text: CharSequence?) {
@@ -416,51 +467,99 @@ class MyKeyboardService : InputMethodService() {
     ////////////////////////////////////////////
     // Handle key events
     private fun handleKey(primaryCode: Int, keyCodes: IntArray?, label: CharSequence?) {
-        val inputConnection = currentInputConnection
-        when (primaryCode) {
 
-            // Keys for which codes are defined
-            KEYCODE_SPACE -> inputConnection.commitText(" ", 1)
-            KEYCODE_ENTER -> inputConnection.commitText("\n", 1)
-            KEYCODE_BACKSPACE -> inputConnection.deleteSurroundingText(1, 0)
-            KEYCODE_CLOSE_FLOATING_KEYBOARD -> {
-                if (isFloatingKeyboardOpen) {
-                    closeFloatingKeyboard()
+        // Handle meta key labels.
+        if (isShiftPressed) {
+            updateKeyLabels(true, KeyEvent.KEYCODE_SHIFT_LEFT)
+            updateKeyLabels(true, KeyEvent.KEYCODE_SHIFT_RIGHT)
+        } else {
+            updateKeyLabels(false, KeyEvent.KEYCODE_SHIFT_LEFT)
+            updateKeyLabels(false, KeyEvent.KEYCODE_SHIFT_RIGHT)
+        }
+
+        if (isCtrlPressed) {
+            updateKeyLabels(true, KeyEvent.KEYCODE_CTRL_LEFT)
+            updateKeyLabels(true, KeyEvent.KEYCODE_CTRL_RIGHT)
+        } else {
+            updateKeyLabels(false, KeyEvent.KEYCODE_CTRL_LEFT)
+            updateKeyLabels(false, KeyEvent.KEYCODE_CTRL_RIGHT)
+        }
+
+        if (isAltPressed) {
+            updateKeyLabels(true, KeyEvent.KEYCODE_ALT_LEFT)
+            updateKeyLabels(true, KeyEvent.KEYCODE_ALT_RIGHT)
+        } else {
+            updateKeyLabels(false, KeyEvent.KEYCODE_ALT_LEFT)
+            updateKeyLabels(false, KeyEvent.KEYCODE_ALT_RIGHT)
+        }
+
+        if (isCapsPressed) {
+            updateKeyLabels(true, KeyEvent.KEYCODE_CAPS_LOCK)
+        } else {
+            updateKeyLabels(false, KeyEvent.KEYCODE_CAPS_LOCK)
+        }
+
+        // Handle custom key codes related to this application.
+        if (primaryCode != NOT_A_KEY) {
+            when (primaryCode) {
+
+                KEYCODE_CLOSE_FLOATING_KEYBOARD -> {
+                    if (isFloatingKeyboardOpen) {
+                        closeFloatingKeyboard()
+                    }
                 }
-            }
-            KEYCODE_OPEN_FLOATING_KEYBOARD -> {
-                if (!isFloatingKeyboardOpen) {
-                    createFloatingKeyboard()
+
+                KEYCODE_OPEN_FLOATING_KEYBOARD -> {
+                    if (!isFloatingKeyboardOpen) {
+                        createFloatingKeyboard()
+                    }
                 }
-            }
-            KEYCODE_SWITCH_KEYBOARD_MODE -> switchKeyboardMode()
-            KEYCODE_ENLARGE_FLOATING_KEYBOARD -> resizeFloatingKeyboard(+KEYBOARD_SCALE_INCREMENT)
-            KEYCODE_SHRINK_FLOATING_KEYBOARD -> resizeFloatingKeyboard(-KEYBOARD_SCALE_INCREMENT)
-            KEYCODE_MOVE_FLOATING_KEYBOARD_LEFT -> translateFloatingKeyboard(-KEYBOARD_TRANSLATION_INCREMENT)
-            KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT -> translateFloatingKeyboard(KEYBOARD_TRANSLATION_INCREMENT)
-            KEYCODE_MOVE_FLOATING_KEYBOARD_UP -> translateVertFloatingKeyboard(-KEYBOARD_TRANSLATION_INCREMENT)
-            KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN -> translateVertFloatingKeyboard(KEYBOARD_TRANSLATION_INCREMENT)
 
+                KEYCODE_SWITCH_KEYBOARD_MODE -> switchKeyboardMode()
+                KEYCODE_ENLARGE_FLOATING_KEYBOARD -> resizeFloatingKeyboard(+KEYBOARD_SCALE_INCREMENT)
+                KEYCODE_SHRINK_FLOATING_KEYBOARD -> resizeFloatingKeyboard(-KEYBOARD_SCALE_INCREMENT)
+                KEYCODE_MOVE_FLOATING_KEYBOARD_LEFT -> translateFloatingKeyboard(-KEYBOARD_TRANSLATION_INCREMENT)
+                KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT -> translateFloatingKeyboard(
+                    KEYBOARD_TRANSLATION_INCREMENT
+                )
 
-            // Ignore key codes for all other keys and commit their labels
-            else -> {
-                val keyLabel = label.toString()
-                inputConnection.commitText(keyLabel, 1)
+                KEYCODE_MOVE_FLOATING_KEYBOARD_UP -> translateVertFloatingKeyboard(-KEYBOARD_TRANSLATION_INCREMENT)
+                KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN -> translateVertFloatingKeyboard(
+                    KEYBOARD_TRANSLATION_INCREMENT
+                )
+
             }
+        } else {
+            // If no key codes for - commit their labels.
+            // This is for ordinary UTF-8 keys and so on.
+            val keyLabel = label.toString()
+            val finalKeyLabel = if (isShiftPressed || isCapsPressed){
+                keyLabel.uppercase()
+            } else {
+                keyLabel.lowercase()
+            }
+            currentInputConnection.commitText(finalKeyLabel, 1)
         }
     }
 
 
-    private fun handleKeyPress(primaryCode: Int) {
-        // Logic to handle key press based on primaryCode
+    private fun updateKeyLabels(isKeyToggled: Boolean, toggledKeyCode: Int) {
+        for (key in keyboardView!!.keyboard.keys) {
+            if (key.codes.isNotEmpty() && key.label != null) {
+                if (key.codes[0] == toggledKeyCode) { // Check if this is the toggled key
+                    // Update label based on Shift key state
+                    key.label = if (isKeyToggled) {
+                        key.label.toString().uppercase() // Convert to uppercase
+                    } else {
+                        key.label.toString().lowercase() // Convert to lowercase
+                    }
+                    // Redraw keyboard
+                    keyboardView!!.invalidateAllKeys()
+                    break // Exit loop after updating the toggled key
+                }
+            }
+        }
     }
-
-    private fun handleKeyRelease(primaryCode: Int) {
-        // Logic to handle key release (if needed)
-    }
-
-    ////////////////////////////////////////////
-    // Key events functions
 
 
     ////////////////////////////////////////////
@@ -470,7 +569,7 @@ class MyKeyboardService : InputMethodService() {
             val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-            registerReceiver(overlayPermissionReceiver, IntentFilter(ACTION_MANAGE_OVERLAY_PERMISSION)) // Use this as context
+            registerReceiver(overlayPermissionReceiver, IntentFilter(ACTION_MANAGE_OVERLAY_PERMISSION), RECEIVER_EXPORTED) // Use this as context
             isReceiverRegistered = true // Set the flag after registering
             startActivity(intent)
         }

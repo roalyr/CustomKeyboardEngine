@@ -171,7 +171,7 @@ public class KeyboardView extends View implements View.OnClickListener {
     private int mStartX;
     private int mStartY;
     private boolean mProximityCorrectOn;
-    private Paint mPaint;
+    public Paint mPaint;
     private Rect mPadding;
     private long mDownTime;
     private long mLastMoveTime;
@@ -463,7 +463,8 @@ public class KeyboardView extends View implements View.OnClickListener {
         if (mKeyboard != null) {
             if (mKeyboard.setShifted(shifted)) {
                 // The whole keyboard probably needs to be redrawn
-                invalidateAllKeys();
+                // Disable for now.
+                // invalidateAllKeys();
                 return true;
             }
         }
@@ -533,10 +534,11 @@ public class KeyboardView extends View implements View.OnClickListener {
         dismissPopupKeyboard();
     }
     private CharSequence adjustCase(CharSequence label) {
-        if (mKeyboard.isShifted() && label != null && label.length() < 3
-                && Character.isLowerCase(label.charAt(0))) {
-            label = label.toString().toUpperCase();
-        }
+        // Disable shifting characters.
+//        if (mKeyboard.isShifted() && label != null && label.length() < 3
+//                && Character.isLowerCase(label.charAt(0))) {
+//            label = label.toString().toUpperCase();
+//        }
         return label;
     }
     @Override

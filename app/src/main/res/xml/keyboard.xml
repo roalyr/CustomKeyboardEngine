@@ -8,75 +8,87 @@
 
     <Row >
         <Key
+            app:keyLabel="Esc"
+            app:codes="111"
+            app:isModifier="true"
+            app:keyWidth="10.5%p"
+            app:keyEdgeFlags="left"
+            />
+        <Key
             app:keyLabel="1"
             app:keyLabelSmall="|"
             app:popupCharacters="|"
-            app:keyWidth="12%p"
+            app:keyWidth="8%p"
             app:popupKeyboard="@xml/keyboard_popup_template"
-            app:keyEdgeFlags="left"
             />
         <Key
             app:keyLabel="2"
             app:keyLabelSmall="\@"
             app:popupCharacters="\@"
-            app:keyWidth="10%p"
+            app:keyWidth="8%p"
             app:popupKeyboard="@xml/keyboard_popup_template"
             />
         <Key
             app:keyLabel="3"
             app:keyLabelSmall="\#"
             app:popupCharacters="\#"
-            app:keyWidth="10%p"
+            app:keyWidth="8%p"
             app:popupKeyboard="@xml/keyboard_popup_template"
             />
         <Key
             app:keyLabel="4"
             app:keyLabelSmall="$"
             app:popupCharacters="$"
-            app:keyWidth="9%p"
+            app:keyWidth="8%p"
             app:popupKeyboard="@xml/keyboard_popup_template"
             />
         <Key
             app:keyLabel="5"
             app:keyLabelSmall="%"
             app:popupCharacters="%"
-            app:keyWidth="9%p"
+            app:keyWidth="8%p"
             app:popupKeyboard="@xml/keyboard_popup_template"
             />
         <Key
             app:keyLabel="6"
             app:keyLabelSmall="^"
             app:popupCharacters="^"
-            app:keyWidth="9%p"
+            app:keyWidth="8%p"
             app:popupKeyboard="@xml/keyboard_popup_template"
             />
         <Key
             app:keyLabel="7"
             app:keyLabelSmall="&amp;"
             app:popupCharacters="&amp;"
-            app:keyWidth="9%p"
+            app:keyWidth="8%p"
             app:popupKeyboard="@xml/keyboard_popup_template"
             />
         <Key
             app:keyLabel="8"
             app:keyLabelSmall="*"
             app:popupCharacters="*"
-            app:keyWidth="10%p"
+            app:keyWidth="8%p"
             app:popupKeyboard="@xml/keyboard_popup_template"
             />
         <Key
             app:keyLabel="9"
             app:keyLabelSmall="«"
             app:popupCharacters="«"
-            app:keyWidth="10%p"
+            app:keyWidth="8%p"
             app:popupKeyboard="@xml/keyboard_popup_template"
             />
         <Key
             app:keyLabel="0"
             app:keyLabelSmall="»"
             app:popupCharacters="»"
-            app:keyWidth="12%p"
+            app:keyWidth="8%p"
             app:popupKeyboard="@xml/keyboard_popup_template"
+            />
+        <Key
+            app:keyLabel="Del"
+            app:codes="112"
+            app:isModifier="true"
+            app:keyWidth="10.5%p"
             app:keyEdgeFlags="right"
             />
     </Row>
@@ -84,7 +96,7 @@
     <Row >
         <Key
             app:keyLabel="Tab"
-            app:codes="0"
+            app:codes="61"
             app:keyWidth="12%p"
             app:keyEdgeFlags="left"
             app:isModifier="true"
@@ -147,7 +159,7 @@
             />
         <Key
             app:keyIcon="@drawable/ic_clear_vector"
-            app:codes="0"
+            app:codes="67"
             app:keyWidth="12%p"
             app:keyEdgeFlags="right"
             app:isModifier="true"
@@ -180,6 +192,7 @@
             />
         <Key
             app:keyLabel="y"
+            app:codes="53"
             app:keyWidth="9%p"
             />
         <Key
@@ -204,6 +217,7 @@
     <Row >
         <Key
             app:keyLabel="a"
+            app:codes="29"
             app:keyWidth="12%p"
             app:keyEdgeFlags="left"
             />
@@ -252,6 +266,7 @@
     <Row>
         <Key
             app:keyLabel="z"
+            app:codes="54"
             app:keyWidth="12%p"
             app:keyEdgeFlags="left"
             />
@@ -306,22 +321,25 @@
     <!-- BOTTOM ROWS -->
     <Row >
         <Key
-            app:codes="0"
+            app:keyLabel="shft"
+            app:codes="59"
+            app:isSticky="true"
             app:keyWidth="12%p"
             app:isModifier="true"
-            app:keyIcon="@drawable/ic_caps_outline_vector"
             app:keyEdgeFlags="left"
             />
         <Key
             app:keyLabel="ctrl"
+            app:codes="113"
+            app:isSticky="true"
             app:keyWidth="12%p"
             app:isModifier="true"
-            app:codes="0"
             />
         <Key
-            app:keyIcon="@drawable/ic_clipboard_vector"
+            app:keyLabel="alt"
+            app:codes="57"
+            app:isSticky="true"
             app:keyWidth="12%p"
-            app:codes="0"
             app:isModifier="true"
             />
 
@@ -345,7 +363,7 @@
         <Key
             app:keyLabel="▲"
             app:keyWidth="12%p"
-            app:codes="0"
+            app:codes="19"
             app:isModifier="true"
             app:isRepeatable="true"
             />
@@ -368,18 +386,17 @@
             app:codes="-12"
             app:keyWidth="12%p"
             app:isModifier="true"
-            app:isRepeatable="true"
             app:keyEdgeFlags="left"
             />
         <Key
-            app:keyLabel="Re"
-            app:codes="0"
+            app:keyLabel="caps"
+            app:codes="115"
+            app:isSticky="true"
             app:keyWidth="12%p"
-            app:isRepeatable="true"
             app:isModifier="true"
             />
         <Key
-            app:keyLabel="En"
+            app:keyLabel="lang"
             app:keyLabelSmall="x"
             app:popupCharacters="spec[x; -27] "
             app:popupKeyboard="@xml/keyboard_popup_template"
@@ -399,21 +416,21 @@
         <Key
             app:keyLabel="◀"
             app:keyWidth="12%p"
-            app:codes="0"
+            app:codes="21"
             app:isModifier="true"
             app:isRepeatable="true"
             />
         <Key
             app:keyLabel="▼"
             app:keyWidth="12%p"
-            app:codes="0"
+            app:codes="20"
             app:isModifier="true"
             app:isRepeatable="true"
             />
         <Key
             app:keyLabel="▶"
             app:keyWidth="12%p"
-            app:codes="0"
+            app:codes="22"
             app:isModifier="true"
             app:keyEdgeFlags="right"
             app:isRepeatable="true"

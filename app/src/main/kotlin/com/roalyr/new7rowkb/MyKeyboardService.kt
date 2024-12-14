@@ -405,6 +405,12 @@ class MyKeyboardService : InputMethodService() {
             private var modifiedMetaState = 0 // If Caps Lock is on.
 
             override fun onKey(primaryCode: Int, keyCodes: IntArray?, label: CharSequence?) {
+                if (isLongPressing(keyboardView)) {
+                    Log.d("MyKeyboard", "Long press detected, suppressing primary key processing")
+                    // You might need to reset the flag here if it's not automatically reset elsewhere
+                    keyboardView.mIsLongPressing = false
+                    return // Early return to prevent primary key processing
+                }
                 // Handle custom keycodes. If key codes do not match - it will be skipped.
                 handleCustomKey(primaryCode, keyCodes, label)
 
@@ -502,6 +508,10 @@ class MyKeyboardService : InputMethodService() {
 
     ////////////////////////////////////////////
     // Handle key events
+    private fun isLongPressing(kbView: KeyboardView?): Boolean {
+        return kbView?.isLongPressing ?: false // Use safe call and elvis operator for null safety
+    }
+
     private fun handleKey(primaryCode: Int, keyCodes: IntArray?, label: CharSequence?,modifiedMetaState: Int) {
 
         // Manually apply metaState to the key event if key code is written in xml.

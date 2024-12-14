@@ -8,7 +8,7 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="keyboard_background">#262626</color>
-    <color name="key_text_color">#C3C3C3</color>
+    <color name="key_text_color">#E2E2E2</color>
     <color name="key_small_text_color">#FFD500</color>
     <color name="key_background_color">#565656</color>
     <color name="key_background_color_modifier">#424242</color>

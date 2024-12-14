@@ -99,5 +99,6 @@
         </attr>
         <attr name="keyLabelSmall" format="string" />
         <attr name="isCompound" format="boolean" />
+        <attr name="codesLongPress" format="string" />
     </declare-styleable>
 </resources>

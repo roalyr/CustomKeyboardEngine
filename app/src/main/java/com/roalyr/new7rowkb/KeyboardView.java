@@ -38,6 +38,7 @@ import android.util.Log;
 import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -45,6 +46,9 @@ import android.view.ViewConfiguration;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.PopupWindow;
 import android.widget.TextView;
+
+import androidx.media3.common.util.SystemClock;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -231,7 +235,11 @@ public class KeyboardView extends View implements View.OnClickListener {
     private int mKeySmallTextColor;
     private Drawable mKeyBackgroundTop;
     private Drawable mKeyBackgroundBottom;
-
+    private int mDefaultVerticalGap;
+    public boolean mIsLongPressing = false;
+    public boolean isLongPressing() {
+        return mIsLongPressing;
+    }
 
     Handler mHandler;
 
@@ -359,7 +367,9 @@ public class KeyboardView extends View implements View.OnClickListener {
                             }
                             break;
                         case MSG_LONGPRESS:
-                            openPopupIfRequired((MotionEvent) msg.obj);
+                            // Custom.
+                            boolean result = sendKeyWithMetaShiftOnLongPress((MotionEvent) msg.obj);
+                            Log.d("KeyboardView", "sendKeyWithMetaShiftOnLongPress result: " + result);
                             break;
                     }
                 }
@@ -456,6 +466,9 @@ public class KeyboardView extends View implements View.OnClickListener {
         // Switching to a different keyboard should abort any pending keys so that the key up
         // doesn't get delivered to the old or new keyboard
         mAbortKey = true; // Until the next ACTION_DOWN
+
+        // Custom.
+        mDefaultVerticalGap = keyboard.mDefaultVerticalGap;
     }
     /**
      * Returns the current keyboard being displayed by this view.
@@ -665,13 +678,9 @@ public class KeyboardView extends View implements View.OnClickListener {
 
             int[] drawableState = key.getCurrentDrawableState();
 
-
-
-
             // Switch the character to uppercase if shift is pressed
             // Disabled.
             String label = key.label == null ? null : adjustCase(key.label).toString();
-
 
             canvas.translate(key.x + kbdPaddingLeft, key.y + kbdPaddingTop);
 
@@ -683,12 +692,12 @@ public class KeyboardView extends View implements View.OnClickListener {
                 if (isTopPart) {
                     // Apply top background
                     keyBackgroundTop.setState(drawableState);
-                    keyBackgroundTop.setBounds(0, 0, key.width, key.height);
+                    keyBackgroundTop.setBounds(0, 0, key.width, key.height + mDefaultVerticalGap);
                     keyBackgroundTop.draw(canvas);
                 } else if (isBottomPart) {
                     // Apply bottom background
                     keyBackgroundBottom.setState(drawableState);
-                    keyBackgroundBottom.setBounds(0, 0, key.width, key.height);
+                    keyBackgroundBottom.setBounds(0, -mDefaultVerticalGap, key.width, key.height + mDefaultVerticalGap);
                     keyBackgroundBottom.draw(canvas);
                 }
             } else if (key.modifier) {
@@ -1040,6 +1049,52 @@ public class KeyboardView extends View implements View.OnClickListener {
         }
         return result;
     }
+
+    // Custom.
+    private boolean sendKeyWithMetaShiftOnLongPress(MotionEvent me) {
+        int keyIndex = getKeyIndices((int) me.getX(), (int) me.getY(), null);
+        if (keyIndex >= 0 && keyIndex < mKeys.length) {
+            Key key = mKeys[keyIndex];
+
+            // Check if app:codesLongPress is provided
+            if (key.codesLongPress != null && key.codesLongPress.length > 0) {
+                // Execute the provided keycode (down and up actions)
+                KeyEvent eventDown = new KeyEvent(
+                        android.os.SystemClock.uptimeMillis(),
+                        android.os.SystemClock.uptimeMillis(),
+                        KeyEvent.ACTION_DOWN,
+                        key.codesLongPress[0], // Use codesLongPress
+                        0,
+                        0 // No meta modifier needed
+                );
+                dispatchKeyEvent(eventDown);
+
+                KeyEvent eventUp = new KeyEvent(
+                        android.os.SystemClock.uptimeMillis(),
+                        android.os.SystemClock.uptimeMillis(),
+                        KeyEvent.ACTION_UP,
+                        key.codesLongPress[0], // Use codesLongPress
+                        0,
+                        0 // No meta modifier needed
+                );
+                dispatchKeyEvent(eventUp);
+
+                return true; // Indicate that the long press was handled
+            } else {
+// Commit app:keyLabelSmall as text directly
+                if (key.labelSmall != null && mKeyboardActionListener != null) {
+                    mIsLongPressing = true; // Set long press flag
+                    mKeyboardActionListener.onText(key.labelSmall); // Use onText()
+                    return true; // Indicate that the long press was handled
+                } else {
+                    Log.w("KeyboardView", "Warning: No keyLabelSmall provided for long press");
+                    return false;
+                }
+            }
+        }
+        return false; // Indicate that the long press was not handled
+    }
+
     /**
      * Called when a key is long pressed. By default this will open any popup keyboard associated
      * with this key through the attributes popupLayout and popupCharacters.

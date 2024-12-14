@@ -245,25 +245,20 @@
             app:keyWidth="12%p"
             app:isModifier="true"
             />
-
         <Key
             app:keyLabel=" "
             app:codes="62"
-            app:keyWidth="14%p"
+            app:keyWidth="28%p"
             app:isRepeatable="true"
+            app:isCompound="true"
+            app:keyRowEdgeFlags="top"
             />
-        <Key
-            app:keyLabel=" "
-            app:codes="62"
-            app:keyWidth="14%p"
-            app:isRepeatable="true"
-            />
-
         <Key
             app:keyLabel="edt"
             app:keyLabelSmall="emj"
             app:keyWidth="12%p"
             app:codes="-1"
+            app:codesLongPress="-1"
             app:isModifier="true"
             />
         <Key
@@ -303,19 +298,16 @@
             app:keyLabelSmall="num"
             app:keyWidth="12%p"
             app:codes="-1"
+            app:codesLongPress="-1"
             app:isModifier="true"
             />
         <Key
             app:keyLabel=" "
             app:codes="62"
-            app:keyWidth="14%p"
+            app:keyWidth="28%p"
             app:isRepeatable="true"
-            />
-        <Key
-            app:keyLabel=" "
-            app:codes="62"
-            app:keyWidth="14%p"
-            app:isRepeatable="true"
+            app:isCompound="true"
+            app:keyRowEdgeFlags="bottom"
             />
         <Key
             app:keyLabel="◀"

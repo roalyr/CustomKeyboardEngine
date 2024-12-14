@@ -88,7 +88,7 @@ public class Keyboard {
     /** Default key height */
     private int mDefaultHeight;
     /** Default gap between rows */
-    private int mDefaultVerticalGap;
+    public int mDefaultVerticalGap;
     /** Is the keyboard in the shifted state */
     private boolean mShifted;
 
@@ -221,7 +221,11 @@ public class Keyboard {
         // Custom key parameters.
         public int rowEdgeFlags;
         public CharSequence labelSmall;
-        public boolean isCompound; // TODO: redundant?
+        public boolean isCompound;
+        public int[] codesLongPress;
+
+
+
 
         /**
          * All the key codes (unicode or custom code) that this key could generate, zero'th
@@ -385,10 +389,14 @@ public class Keyboard {
             // Custom key params.
             rowEdgeFlags = a.getInt(R.styleable.Keyboard_Key_keyRowEdgeFlags, 0);
             labelSmall = a.getText(R.styleable.Keyboard_Key_keyLabelSmall);
-
-            // TODO: maybe redundant?
             isCompound = a.getBoolean(R.styleable.Keyboard_Key_isCompound, false);
-
+            // Initialize codesLongPress here to an empty array
+            codesLongPress = new int[0];
+            TypedValue codesLongPressValue = new TypedValue();
+            a.getValue(R.styleable.Keyboard_Key_codesLongPress, codesLongPressValue);
+            if (codesLongPressValue.type == TypedValue.TYPE_STRING) {
+                codesLongPress = parseCSV(codesLongPressValue.string.toString());
+            }
 
             a.recycle();
         }

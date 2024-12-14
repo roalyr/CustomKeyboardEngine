@@ -122,7 +122,8 @@ public class KeyboardView extends View implements View.OnClickListener {
     }
     private static final boolean DEBUG = false;
     private static final int NOT_A_KEY = -1;
-    private static final int[] KEY_DELETE = { Keyboard.KEYCODE_DELETE };
+    // Disabled
+    //private static final int[] KEY_DELETE = { Keyboard.KEYCODE_DELETE };
     private static final int[] LONG_PRESSABLE_STATE_SET = { R.attr.state_long_pressable };
     private Keyboard mKeyboard;
     private int mCurrentKeyIndex = NOT_A_KEY;
@@ -226,6 +227,11 @@ public class KeyboardView extends View implements View.OnClickListener {
 
     private Context mContext;
 
+    // Custom values.
+    private int mKeySmallTextColor;
+    private Drawable mKeyBackgroundTop;
+    private Drawable mKeyBackgroundBottom;
+
 
     Handler mHandler;
 
@@ -260,6 +266,12 @@ public class KeyboardView extends View implements View.OnClickListener {
         mPopupLayout = a.getResourceId(R.styleable.KeyboardView_popupLayout, 0);
         mShadowColor = a.getColor(R.styleable.KeyboardView_shadowColor, 0);
         mShadowRadius = a.getFloat(R.styleable.KeyboardView_shadowRadius, 0f);
+
+        // Custom attributes.
+        mKeySmallTextColor = a.getColor(R.styleable.KeyboardView_keySmallTextColor, 0xFF000000);
+        mKeyBackgroundTop = a.getDrawable(R.styleable.KeyboardView_keyBackgroundTop);
+        mKeyBackgroundBottom = a.getDrawable(R.styleable.KeyboardView_keyBackgroundBottom);
+
 
         mPadding = new Rect(0, 0, 0, 0); // Initialize mPadding here
 
@@ -534,7 +546,7 @@ public class KeyboardView extends View implements View.OnClickListener {
         dismissPopupKeyboard();
     }
     private CharSequence adjustCase(CharSequence label) {
-        // Disable shifting characters.
+        // Disabled. TODO: Optionally?
 //        if (mKeyboard.isShifted() && label != null && label.length() < 3
 //                && Character.isLowerCase(label.charAt(0))) {
 //            label = label.toString().toUpperCase();
@@ -627,6 +639,11 @@ public class KeyboardView extends View implements View.OnClickListener {
         final Key[] keys = mKeys;
         final Key invalidKey = mInvalidatedKey;
 
+        // Custom.
+        final Drawable keyBackgroundTop = mKeyBackgroundTop;
+        final Drawable keyBackgroundBottom = mKeyBackgroundBottom;
+
+
         paint.setColor(mKeyTextColor);
         boolean drawSingleKey = false;
         if (invalidKey != null && canvas.getClipBounds(clipRegion)) {
@@ -652,49 +669,88 @@ public class KeyboardView extends View implements View.OnClickListener {
 
 
             // Switch the character to uppercase if shift is pressed
+            // Disabled.
             String label = key.label == null ? null : adjustCase(key.label).toString();
 
 
             canvas.translate(key.x + kbdPaddingLeft, key.y + kbdPaddingTop);
 
-            if (key.modifier) {
-                keyBackgroundModifier.setState(drawableState);
-                final Rect bounds = keyBackgroundModifier.getBounds();
-                if (key.width != bounds.right ||
-                        key.height != bounds.bottom) {
-                    keyBackgroundModifier.setBounds(0, 0, key.width, key.height);
+            if (key.isCompound) {
+                // Check rowEdgeFlags to determine top or bottom part
+                boolean isTopPart = (key.rowEdgeFlags & 2) != 0; // Check if top flag is set
+                boolean isBottomPart = (key.rowEdgeFlags & 1) != 0; // Check if bottom flag is set
+
+                if (isTopPart) {
+                    // Apply top background
+                    keyBackgroundTop.setState(drawableState);
+                    keyBackgroundTop.setBounds(0, 0, key.width, key.height);
+                    keyBackgroundTop.draw(canvas);
+                } else if (isBottomPart) {
+                    // Apply bottom background
+                    keyBackgroundBottom.setState(drawableState);
+                    keyBackgroundBottom.setBounds(0, 0, key.width, key.height);
+                    keyBackgroundBottom.draw(canvas);
                 }
+            } else if (key.modifier) {
+                // Apply modifier background
+                keyBackgroundModifier.setState(drawableState);
+                keyBackgroundModifier.setBounds(0, 0, key.width, key.height);
                 keyBackgroundModifier.draw(canvas);
             } else {
+                // Apply default background
                 keyBackground.setState(drawableState);
-                final Rect bounds = keyBackground.getBounds();
-                if (key.width != bounds.right ||
-                        key.height != bounds.bottom) {
-                    keyBackground.setBounds(0, 0, key.width, key.height);
-                }
+                keyBackground.setBounds(0, 0, key.width, key.height);
                 keyBackground.draw(canvas);
             }
+
 
             if (label != null) {
                 // For characters, use large font. For labels like "Done", use small font.
                 if (label.length() > 1 && key.codes.length < 2) {
-                    paint.setTextSize((float) (key.height * 0.4));
-                    paint.setTypeface(Typeface.DEFAULT_BOLD);
+                    paint.setTextSize((float) (key.height * 0.3)); // TODO: optional?
+                    paint.setTypeface(Typeface.DEFAULT);
                 } else {
-                    paint.setTextSize((float) (key.height * 0.5));
+                    paint.setTextSize((float) (key.height * 0.4));
                     paint.setTypeface(Typeface.DEFAULT);
                 }
-                // Draw a drop shadow for the text
-                paint.setShadowLayer(mShadowRadius, 0, 0, mShadowColor);
-                // Draw the text
-                canvas.drawText(label,
+
+                // Calculate primary label position based on small label presence
+                float primaryLabelY = (key.height - padding.top - padding.bottom) / 2f // Default: center
+                        + (paint.getTextSize() - paint.descent()) / 2 + padding.top;
+                if (key.labelSmall != null && key.labelSmall.length() > 0) {
+                    primaryLabelY = (key.height - padding.top - padding.bottom) * 0.75f // Lower half if small label present
+                            + (paint.getTextSize() - paint.descent()) / 2 + padding.top;
+                }
+
+                // Draw primary label
+                paint.setShadowLayer(mShadowRadius, 1, 1, mShadowColor);
+                canvas.drawText(
+                        label,
                         (key.width - padding.left - padding.right) / 2
                                 + padding.left,
-                        (key.height - padding.top - padding.bottom) / 2
-                                + (paint.getTextSize() - paint.descent()) / 2 + padding.top,
-                        paint);
-                // Turn off drop shadow
+                        primaryLabelY, // Use calculated Y position
+                        paint
+                );
                 paint.setShadowLayer(0, 0, 0, 0);
+
+                // Draw small label in the upper half if available
+                if (key.labelSmall != null && key.labelSmall.length() > 0) {
+                    paint.setTextSize((float) (key.height * 0.3));
+                    int originalColor = paint.getColor(); // Store original color
+                    paint.setColor(mKeySmallTextColor);
+
+                    paint.setShadowLayer(mShadowRadius, 1, 1, mShadowColor);
+                    canvas.drawText(
+                            (String) key.labelSmall,
+                            (key.width - padding.left - padding.right) / 2.0f
+                                    + padding.left,
+                            (key.height - padding.top - padding.bottom) * 0.25f
+                                    + (paint.getTextSize() - paint.descent()) / 2 + padding.top, // Upper half
+                            paint
+                    );
+                    paint.setShadowLayer(0, 0, 0, 0);
+                    paint.setColor(originalColor); // Restore original color
+                }
             } else if (key.icon != null) {
                 final int drawableX = (key.width - padding.left - padding.right
                         - key.icon.getIntrinsicWidth()) / 2 + padding.left;
@@ -794,14 +850,15 @@ public class KeyboardView extends View implements View.OnClickListener {
                 Arrays.fill(codes, NOT_A_KEY);
                 getKeyIndices(x, y, codes);
                 // Multi-tap
-                if (mInMultiTap) {
+                // Disabled
+/*                if (mInMultiTap) {
                     if (mTapCount != -1) {
-                        mKeyboardActionListener.onKey(Keyboard.KEYCODE_DELETE, KEY_DELETE, "Del");
+                        //mKeyboardActionListener.onKey(Keyboard.KEYCODE_DELETE, KEY_DELETE, "Del");
                     } else {
                         mTapCount = 0;
                     }
                     code = key.codes[mTapCount];
-                }
+                }*/
                 mKeyboardActionListener.onKey(code, codes, key.label);
                 mKeyboardActionListener.onRelease(code);
             } else if (key.codes == null || key.codes.length == 0) {

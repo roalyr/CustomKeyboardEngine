@@ -51,13 +51,14 @@ class MyKeyboardService : InputMethodService() {
 
     companion object {
         private const val ACTION_MANAGE_OVERLAY_PERMISSION = "android.settings.action.MANAGE_OVERLAY_PERMISSION"
-        const val NAV_BAR_HEIGHT_PLACEHOLDER = 135 // In order to not cover the nav bar
         const val KEYBOARD_MINIMAL_WIDTH = 500
         const val KEYBOARD_MINIMAL_HEIGHT = 500
         const val KEYBOARD_TRANSLATION_INCREMENT = 50
-        const val KEYBOARD_TRANSLATION_BOTTOM_OFFSET = 40 // dp
+        const val KEYBOARD_TRANSLATION_TOP_OFFSET = 20
+        const val KEYBOARD_TRANSLATION_BOTTOM_OFFSET = 40
         const val KEYBOARD_SCALE_INCREMENT = 50
         const val NOT_A_KEY = -1
+        // Custom keycodes.
         const val KEYCODE_CLOSE_FLOATING_KEYBOARD = -10
         const val KEYCODE_OPEN_FLOATING_KEYBOARD = -11
         const val KEYCODE_SWITCH_KEYBOARD_MODE = -12
@@ -123,6 +124,13 @@ class MyKeyboardService : InputMethodService() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         // Close the floating keyboard before the input view is recreated
         // TODO: make sure the window is properly bounded.
+        screenWidth = getScreenWidth()
+        screenHeight = getScreenHeight()
+
+        // After rotating the screen - reposition the floating KB vertically within new limits.
+        translateVertFloatingKeyboard(floatingKeyboardPosY)
+
+        // Prevents bug where the thing doesn't close somehow.
         closeFloatingKeyboard()
         super.onConfigurationChanged(newConfig)
     }
@@ -167,11 +175,36 @@ class MyKeyboardService : InputMethodService() {
             )
 
             windowManager.addView(keyboardView, params)
+            floatingKeyboardView?.post {
+                floatingKeyboardHeight = floatingKeyboardView!!.measuredHeight
+            }
 
             setKeyboardActionListener(keyboardView)
             isFloatingKeyboardOpen = true
         } else {
             Log.e("MyKeyboardService", "Failed to inflate floating keyboard view")
+        }
+    }
+
+    private fun updateFloatingKeyboard() {
+        if (floatingKeyboardView != null && isFloatingKeyboardOpen && ::windowManager.isInitialized) {
+            // Check screen width to keep window size within
+            screenWidth = getScreenWidth()
+
+            // Update layout parameters
+            val params = WindowManager.LayoutParams(
+                floatingKeyboardWidth,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                floatingKeyboardPosX,
+                floatingKeyboardPosY,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT
+            )
+
+            // Update the floating keyboard view's layout
+            windowManager.updateViewLayout(floatingKeyboardView, params)
+            floatingKeyboardView?.invalidateAllKeys()
         }
     }
 
@@ -232,7 +265,7 @@ class MyKeyboardService : InputMethodService() {
             } catch (e: Exception) {
                 Log.e("MyKeyboardService", "Error closing floating keyboard", e)
             } finally {
-                floatingKeyboardView = null // Reset the view reference
+                this.floatingKeyboardView = null
             }
         }
     }
@@ -241,6 +274,7 @@ class MyKeyboardService : InputMethodService() {
         val keyboardView = keyboardView
         if (keyboardView != null && keyboardView.parent != null) {
             (keyboardView.parent as? ViewGroup)?.removeView(keyboardView)
+            this.keyboardView = null
         }
     }
 
@@ -248,6 +282,7 @@ class MyKeyboardService : InputMethodService() {
         val placeholderView = placeholderView
         if (placeholderView != null && placeholderView.parent != null) {
             (placeholderView.parent as? ViewGroup)?.removeView(placeholderView)
+            this.placeholderView = null
         }
     }
 
@@ -256,6 +291,12 @@ class MyKeyboardService : InputMethodService() {
         closePlaceholderKeyboard()
         closeFloatingKeyboard()
         // ... close any other keyboard views
+    }
+
+    private fun invalidateAllKeysOnBothKeyboards() {
+        floatingKeyboardView?.invalidateAllKeys()
+        keyboardView?.invalidateAllKeys()
+        placeholderView?.invalidateAllKeys()
     }
 
     private fun switchKeyboardMode() {
@@ -281,6 +322,8 @@ class MyKeyboardService : InputMethodService() {
         } else {
             Log.e("MyKeyboardService", "Error creating new input view")
         }
+
+        updateModifierKeyLabels()
     }
 
     ////////////////////////////////////////////
@@ -288,7 +331,17 @@ class MyKeyboardService : InputMethodService() {
     private fun resizeFloatingKeyboard(increment: Int) {
         if (floatingKeyboardView != null && isFloatingKeyboardOpen) {
             floatingKeyboardWidth += increment
-            floatingKeyboardWidth = floatingKeyboardWidth.coerceIn(KEYBOARD_MINIMAL_WIDTH,screenWidth)
+            floatingKeyboardWidth =
+                floatingKeyboardWidth.coerceIn(KEYBOARD_MINIMAL_WIDTH, screenWidth)
+
+            // Update layout parameters and apply to the view
+            // TODO: a poor workaround to mitigate flickering.
+            floatingKeyboardView?.let { keyboardView ->
+                val layoutParams = keyboardView.layoutParams as WindowManager.LayoutParams
+                layoutParams.width = floatingKeyboardWidth
+                windowManager.updateViewLayout(keyboardView, layoutParams)
+            }
+
             closeFloatingKeyboard()
             createFloatingKeyboard()
         }
@@ -298,10 +351,11 @@ class MyKeyboardService : InputMethodService() {
     private fun translateFloatingKeyboard(xOffset: Int) {
         if (floatingKeyboardView != null && isFloatingKeyboardOpen) {
             floatingKeyboardPosX += xOffset
-            floatingKeyboardPosX = floatingKeyboardPosX.coerceIn(-(screenWidth/2 - floatingKeyboardWidth/2),
-                (screenWidth/2 - floatingKeyboardWidth/2))
-            closeFloatingKeyboard()
-            createFloatingKeyboard()
+            floatingKeyboardPosX = floatingKeyboardPosX.coerceIn(
+                -(screenWidth / 2 - floatingKeyboardWidth / 2),
+                (screenWidth / 2 - floatingKeyboardWidth / 2)
+            )
+            updateFloatingKeyboard()
         }
     }
 
@@ -309,58 +363,35 @@ class MyKeyboardService : InputMethodService() {
         if (floatingKeyboardView != null && isFloatingKeyboardOpen) {
             floatingKeyboardPosY += yOffset
 
-            // Get the height of the floating keyboard
-            floatingKeyboardView!!.measure(
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-            )
-            floatingKeyboardHeight = floatingKeyboardView!!.measuredHeight
-
-            // Get the height of bottom nav bar (or use placeholder assumption value)
-            var navigationBarHeight = 0
-            val resourceId = resources.getIdentifier("navigation_bar_height", "dimen", "android")
-            if (resourceId > 0) {
-                navigationBarHeight = resources.getDimensionPixelSize(resourceId)
-            } else {
-                navigationBarHeight = NAV_BAR_HEIGHT_PLACEHOLDER
-            }
-
-            // get pixel density to convert dp to px
+            // Get the screen density
             val density = resources.displayMetrics.density
-            val bottomOffsetPixels = KEYBOARD_TRANSLATION_BOTTOM_OFFSET * density
 
-            // Keep some space in the bottom
+            // Convert dp offsets to pixel offsets
+            val bottomOffsetPx = KEYBOARD_TRANSLATION_BOTTOM_OFFSET * density
+
+            // Keep some space in the bottom and top
+            val coerceTop = (-(screenHeight / 2.0  - floatingKeyboardHeight / 2.0)).toInt()
+            val coerceBottom = (screenHeight / 2.0 - bottomOffsetPx - floatingKeyboardHeight / 2.0).toInt()
             floatingKeyboardPosY = floatingKeyboardPosY.coerceIn(
-                -(screenHeight/2 - floatingKeyboardHeight/2),
-                ((screenHeight/2 - floatingKeyboardHeight/2 - bottomOffsetPixels - navigationBarHeight).toInt())
+                coerceTop,
+                coerceBottom
             )
-
-            closeFloatingKeyboard()
-            createFloatingKeyboard()
+            updateFloatingKeyboard()
         }
     }
 
     private fun getScreenWidth(): Int {
         val displayMetrics = DisplayMetrics()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            display?.getRealMetrics(displayMetrics)
-        } else {
-            @Suppress("DEPRECATION")
-            windowManager.defaultDisplay.getMetrics(displayMetrics)
-        }
+        windowManager.defaultDisplay.getMetrics(displayMetrics)
         return displayMetrics.widthPixels
     }
 
     private fun getScreenHeight(): Int {
         val displayMetrics = DisplayMetrics()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            display?.getRealMetrics(displayMetrics)
-        } else {
-            @Suppress("DEPRECATION")
-            windowManager.defaultDisplay.getMetrics(displayMetrics)
-        }
+        windowManager.defaultDisplay.getMetrics(displayMetrics)
         return displayMetrics.heightPixels
     }
+
 
 
 
@@ -371,9 +402,13 @@ class MyKeyboardService : InputMethodService() {
         keyboardView.onKeyboardActionListener = object : KeyboardView.OnKeyboardActionListener {
 
             private var metaState = 0 // Combined meta state
+            private var modifiedMetaState = 0 // If Caps Lock is on.
 
             override fun onKey(primaryCode: Int, keyCodes: IntArray?, label: CharSequence?) {
-                // Intercept key events and update metaState
+                // Handle custom keycodes. If key codes do not match - it will be skipped.
+                handleCustomKey(primaryCode, keyCodes, label)
+
+                // Intercept key events and update metaState and then handle ordinary keycodes or key labels.
                 when (primaryCode) {
                     KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> {
                         // Toggle Shift
@@ -383,6 +418,7 @@ class MyKeyboardService : InputMethodService() {
                             metaState or KeyEvent.META_SHIFT_ON
                         }
                         isShiftPressed = !isShiftPressed
+                        updateModifierKeyLabels()
                     }
                     KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT -> {
                         // Toggle Ctrl
@@ -392,6 +428,7 @@ class MyKeyboardService : InputMethodService() {
                             metaState or KeyEvent.META_CTRL_ON
                         }
                         isCtrlPressed = !isCtrlPressed
+                        updateModifierKeyLabels()
                     }
                     KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT -> {
                         // Toggle Alt
@@ -401,35 +438,34 @@ class MyKeyboardService : InputMethodService() {
                             metaState or KeyEvent.META_ALT_ON
                         }
                         isAltPressed = !isAltPressed
+                        updateModifierKeyLabels()
                     }
                     KeyEvent.KEYCODE_CAPS_LOCK -> {
                         // Toggle Caps
                         isCapsPressed = !isCapsPressed
+                        updateModifierKeyLabels()
                     }
 
                     else -> {
                         // Modify metaState for injected events
-                        val modifiedMetaState = if (isCapsPressed) {
+                        modifiedMetaState = if (isCapsPressed) {
                             metaState or KeyEvent.META_CAPS_LOCK_ON
                         } else {
                             metaState
                         }
-                        // Manually apply metaState to the key event
-                        val modifiedEvent = KeyEvent(0, 0, KeyEvent.ACTION_DOWN,
-                            primaryCode, 0, modifiedMetaState)
 
-                        // Inject the modified key event
-                        currentInputConnection?.sendKeyEvent(modifiedEvent) // Use stored InputConnection
+                        // Handle ordinary keys according to meta state.
+                        handleKey(primaryCode, keyCodes, label, modifiedMetaState)
 
                         // Reset metaState after other keys (except modifiers)
                         metaState = 0 // Reset meta state
                         isShiftPressed = false // Reset Shift state
                         isCtrlPressed = false // Reset Ctrl state
                         isAltPressed = false // Reset Alt state
+                        // Keep caps lock on until toggled manually.
+                        updateModifierKeyLabels()
                     }
                 }
-
-                handleKey(primaryCode, keyCodes, label) // Call handleKey here
             }
 
             override fun onPress(primaryCode: Int) {
@@ -466,39 +502,37 @@ class MyKeyboardService : InputMethodService() {
 
     ////////////////////////////////////////////
     // Handle key events
-    private fun handleKey(primaryCode: Int, keyCodes: IntArray?, label: CharSequence?) {
+    private fun handleKey(primaryCode: Int, keyCodes: IntArray?, label: CharSequence?,modifiedMetaState: Int) {
 
-        // Handle meta key labels.
-        if (isShiftPressed) {
-            updateKeyLabels(true, KeyEvent.KEYCODE_SHIFT_LEFT)
-            updateKeyLabels(true, KeyEvent.KEYCODE_SHIFT_RIGHT)
+        // Manually apply metaState to the key event if key code is written in xml.
+        if (primaryCode != NOT_A_KEY) {
+            injectKeyEvent(primaryCode, modifiedMetaState)
         } else {
-            updateKeyLabels(false, KeyEvent.KEYCODE_SHIFT_LEFT)
-            updateKeyLabels(false, KeyEvent.KEYCODE_SHIFT_RIGHT)
-        }
+            // If no key codes for a key - attempt to get key code from label.
+            if (label != null) { // Check if label is not null
+                val keyLabel = label.toString()
+                val keyCode = getKeycodeFromLabel(keyLabel)
 
-        if (isCtrlPressed) {
-            updateKeyLabels(true, KeyEvent.KEYCODE_CTRL_LEFT)
-            updateKeyLabels(true, KeyEvent.KEYCODE_CTRL_RIGHT)
-        } else {
-            updateKeyLabels(false, KeyEvent.KEYCODE_CTRL_LEFT)
-            updateKeyLabels(false, KeyEvent.KEYCODE_CTRL_RIGHT)
+                if (keyCode != null) {
+                    injectKeyEvent(keyCode, modifiedMetaState)
+                } else {
+                    // If no key code found, commit label as text "as is".
+                    val finalKeyLabel = if (isShiftPressed || isCapsPressed) {
+                        keyLabel.uppercase()
+                    } else {
+                        keyLabel.lowercase()
+                    }
+                    currentInputConnection.commitText(finalKeyLabel, 1)
+                }
+            } else {
+                // Handle cases where label is null (e.g., keys with icons)
+                // You might want to log a message or perform other actions here
+                Log.d("Keyboard", "Key with null label pressed (primaryCode: $primaryCode)")
+            }
         }
+    }
 
-        if (isAltPressed) {
-            updateKeyLabels(true, KeyEvent.KEYCODE_ALT_LEFT)
-            updateKeyLabels(true, KeyEvent.KEYCODE_ALT_RIGHT)
-        } else {
-            updateKeyLabels(false, KeyEvent.KEYCODE_ALT_LEFT)
-            updateKeyLabels(false, KeyEvent.KEYCODE_ALT_RIGHT)
-        }
-
-        if (isCapsPressed) {
-            updateKeyLabels(true, KeyEvent.KEYCODE_CAPS_LOCK)
-        } else {
-            updateKeyLabels(false, KeyEvent.KEYCODE_CAPS_LOCK)
-        }
-
+    private fun handleCustomKey(primaryCode: Int, keyCodes: IntArray?, label: CharSequence?)  {
         // Handle custom key codes related to this application.
         if (primaryCode != NOT_A_KEY) {
             when (primaryCode) {
@@ -529,36 +563,168 @@ class MyKeyboardService : InputMethodService() {
                 )
 
             }
-        } else {
-            // If no key codes for - commit their labels.
-            // This is for ordinary UTF-8 keys and so on.
-            val keyLabel = label.toString()
-            val finalKeyLabel = if (isShiftPressed || isCapsPressed){
-                keyLabel.uppercase()
-            } else {
-                keyLabel.lowercase()
-            }
-            currentInputConnection.commitText(finalKeyLabel, 1)
         }
     }
 
+    ////////////////////////////////////////////
+    // Event injections
+
+    private fun injectMetaModifierKeysDown(metaState: Int) {
+        if (metaState and KeyEvent.META_SHIFT_ON != 0) {
+            injectKeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SHIFT_LEFT, 0) // Or KEYCODE_SHIFT_RIGHT
+        }
+        if (metaState and KeyEvent.META_CTRL_ON != 0) {
+            injectKeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CTRL_LEFT, 0) // Or KEYCODE_CTRL_RIGHT
+        }
+        if (metaState and KeyEvent.META_ALT_ON != 0) {
+            injectKeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ALT_LEFT, 0) // Or KEYCODE_ALT_RIGHT
+        }
+    }
+
+    private fun injectMetaModifierKeyUpKeys(metaState: Int) {
+        if (metaState and KeyEvent.META_SHIFT_ON != 0) {
+            injectKeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_SHIFT_LEFT, 0) // Or KEYCODE_SHIFT_RIGHT
+        }
+        if (metaState and KeyEvent.META_CTRL_ON != 0) {
+            injectKeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CTRL_LEFT, 0) // Or KEYCODE_CTRL_RIGHT
+        }
+        if (metaState and KeyEvent.META_ALT_ON != 0) {
+            injectKeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ALT_LEFT, 0) // Or KEYCODE_ALT_RIGHT
+        }
+    }
+
+    private fun injectKeyEvent(keyCode: Int, metaState: Int) {
+        // Inject meta modifier key events if present in metaState
+        injectMetaModifierKeysDown(metaState)
+
+        // Inject the main key event
+        injectKeyEvent(KeyEvent.ACTION_DOWN, keyCode, metaState)
+        injectKeyEvent(KeyEvent.ACTION_UP, keyCode, metaState)
+
+        // Inject meta modifier key up events if present in metaState
+        injectMetaModifierKeyUpKeys(metaState)
+    }
+
+    private fun injectKeyEvent(action: Int, keyCode: Int, metaState: Int) {
+        val event = KeyEvent(0, 0, action, keyCode, 0, metaState)
+        currentInputConnection?.sendKeyEvent(event)
+    }
+
+    ////////////////////////////////////////////
+    // Label handling
+    private fun updateModifierKeyLabels() {
+        updateKeyLabels(isShiftPressed, KeyEvent.KEYCODE_SHIFT_LEFT)
+        updateKeyLabels(isShiftPressed, KeyEvent.KEYCODE_SHIFT_RIGHT)
+        updateKeyLabels(isCtrlPressed, KeyEvent.KEYCODE_CTRL_LEFT)
+        updateKeyLabels(isCtrlPressed, KeyEvent.KEYCODE_CTRL_RIGHT)
+        updateKeyLabels(isAltPressed, KeyEvent.KEYCODE_ALT_LEFT)
+        updateKeyLabels(isAltPressed, KeyEvent.KEYCODE_ALT_RIGHT)
+        updateKeyLabels(isCapsPressed, KeyEvent.KEYCODE_CAPS_LOCK)
+        updateKeyLabels(isFloatingKeyboard, KEYCODE_SWITCH_KEYBOARD_MODE)
+    }
 
     private fun updateKeyLabels(isKeyToggled: Boolean, toggledKeyCode: Int) {
-        for (key in keyboardView!!.keyboard.keys) {
-            if (key.codes.isNotEmpty() && key.label != null) {
-                if (key.codes[0] == toggledKeyCode) { // Check if this is the toggled key
-                    // Update label based on Shift key state
-                    key.label = if (isKeyToggled) {
-                        key.label.toString().uppercase() // Convert to uppercase
-                    } else {
-                        key.label.toString().lowercase() // Convert to lowercase
+        val keyboardViews = listOfNotNull(keyboardView, floatingKeyboardView, placeholderView)
+        for (keyboardView in keyboardViews) { // Iterate through the keyboard views
+            for (key in keyboardView.keyboard.keys) {
+                if (key.codes.isNotEmpty() && key.label != null) {
+                    if (key.codes[0] == toggledKeyCode) { // Check if this is the toggled key
+                        key.label = if (isKeyToggled) {
+                            key.label.toString().uppercase() // Convert to uppercase
+                        } else {
+                            key.label.toString().lowercase() // Convert to lowercase
+                        }
+                        // Redraw keyboard
+                        invalidateAllKeysOnBothKeyboards()
+                        break // Exit loop after updating the toggled key
                     }
-                    // Redraw keyboard
-                    keyboardView!!.invalidateAllKeys()
-                    break // Exit loop after updating the toggled key
                 }
             }
         }
+    }
+
+    ////////////////////////////////////////////
+    // Handle primary key code lookup.
+    private fun getKeycodeFromLabel(label: String): Int? {
+        // Create a mapping of labels to key codes
+        val labelToKeycodeMap = mapOf(
+            "a" to KeyEvent.KEYCODE_A,
+            "b" to KeyEvent.KEYCODE_B,
+            "c" to KeyEvent.KEYCODE_C,
+            "d" to KeyEvent.KEYCODE_D,
+            "e" to KeyEvent.KEYCODE_E,
+            "f" to KeyEvent.KEYCODE_F,
+            "g" to KeyEvent.KEYCODE_G,
+            "h" to KeyEvent.KEYCODE_H,
+            "i" to KeyEvent.KEYCODE_I,
+            "j" to KeyEvent.KEYCODE_J,
+            "k" to KeyEvent.KEYCODE_K,
+            "l" to KeyEvent.KEYCODE_L,
+            "m" to KeyEvent.KEYCODE_M,
+            "n" to KeyEvent.KEYCODE_N,
+            "o" to KeyEvent.KEYCODE_O,
+            "p" to KeyEvent.KEYCODE_P,
+            "q" to KeyEvent.KEYCODE_Q,
+            "r" to KeyEvent.KEYCODE_R,
+            "s" to KeyEvent.KEYCODE_S,
+            "t" to KeyEvent.KEYCODE_T,
+            "u" to KeyEvent.KEYCODE_U,
+            "v" to KeyEvent.KEYCODE_V,
+            "w" to KeyEvent.KEYCODE_W,
+            "x" to KeyEvent.KEYCODE_X,
+            "y" to KeyEvent.KEYCODE_Y,
+            "z" to KeyEvent.KEYCODE_Z,
+
+            "0" to KeyEvent.KEYCODE_0,
+            "1" to KeyEvent.KEYCODE_1,
+            "2" to KeyEvent.KEYCODE_2,
+            "3" to KeyEvent.KEYCODE_3,
+            "4" to KeyEvent.KEYCODE_4,
+            "5" to KeyEvent.KEYCODE_5,
+            "6" to KeyEvent.KEYCODE_6,
+            "7" to KeyEvent.KEYCODE_7,
+            "8" to KeyEvent.KEYCODE_8,
+            "9" to KeyEvent.KEYCODE_9,
+
+            " " to KeyEvent.KEYCODE_SPACE,
+            "." to KeyEvent.KEYCODE_PERIOD,
+            "," to KeyEvent.KEYCODE_COMMA,
+            ";" to KeyEvent.KEYCODE_SEMICOLON,
+            "'" to KeyEvent.KEYCODE_APOSTROPHE,
+            "/" to KeyEvent.KEYCODE_SLASH,
+            "\\" to KeyEvent.KEYCODE_BACKSLASH,
+            "`" to KeyEvent.KEYCODE_GRAVE,
+            "[" to KeyEvent.KEYCODE_LEFT_BRACKET,
+            "]" to KeyEvent.KEYCODE_RIGHT_BRACKET,
+            "-" to KeyEvent.KEYCODE_MINUS,
+            "=" to KeyEvent.KEYCODE_EQUALS,
+
+            // Additional Symbols and Characters
+            "!" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_1,
+            "@" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_2,
+            "#" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_3,
+            "$" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_4,
+            "%" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_5,
+            "^" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_6,
+            "&" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_7,
+            "*" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_8,
+            "(" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_9,
+            ")" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_0,
+            "_" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_MINUS,
+            "+" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_EQUALS,
+            ":" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_SEMICOLON,
+            "\"" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_APOSTROPHE,
+            "<" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_COMMA,
+            ">" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_PERIOD,
+            "?" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_SLASH,
+            "|" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_BACKSLASH,
+            "{" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_LEFT_BRACKET,
+            "}" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_RIGHT_BRACKET,
+            "~" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_GRAVE,
+        )
+
+        // Check if the label exists in the mapping
+        return labelToKeycodeMap[label.lowercase()] // Convert label to lowercase for case-insensitivity
     }
 
 

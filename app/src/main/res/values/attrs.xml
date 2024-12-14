@@ -27,6 +27,10 @@
         <attr name="popupLayout" format="reference" />
         <attr name="shadowColor" format="color" />
         <attr name="shadowRadius" format="float" />
+        <!-- Custom attributes, TODO: implement -->
+        <attr name="keySmallTextColor" format="color" />
+        <attr name="keyBackgroundTop" format="reference" />
+        <attr name="keyBackgroundBottom" format="reference" />
     </declare-styleable>
     <declare-styleable name="KeyboardViewPreviewState">
         <!-- State for {@link android.inputmethodservice.KeyboardView KeyboardView}
@@ -69,12 +73,6 @@
             <!-- Key is anchored to the right of the keyboard -->
             <flag name="right" value="2" />
         </attr>
-        <attr name="keyRowEdgeFlags">
-            <!-- Key is anchored to the left of the keyboard -->
-            <flag name="bottom" value="1" />
-            <!-- Key is anchored to the right of the keyboard -->
-            <flag name="top" value="2" />
-        </attr>
         <!-- Whether this is a modifier key such as Alt or Shift -->
         <attr name="isModifier" format="boolean" />
         <!-- Whether this is a toggle key -->
@@ -92,6 +90,13 @@
         <!-- Mode of the keyboard. If the mode doesn't match the
              requested keyboard mode, the key will be skipped -->
         <attr name="keyboardMode" />
+        <!-- Custom attributes, TODO: implement -->
+        <attr name="keyRowEdgeFlags">
+            <!-- Key is anchored to the left of the keyboard -->
+            <flag name="bottom" value="1" />
+            <!-- Key is anchored to the right of the keyboard -->
+            <flag name="top" value="2" />
+        </attr>
         <attr name="keyLabelSmall" format="string" />
         <attr name="isCompound" format="boolean" />
     </declare-styleable>

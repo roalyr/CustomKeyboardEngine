@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="key_height">40dp</dimen>
+    <dimen name="key_height_nav">34dp</dimen>
+    <dimen name="vertical_gap">1dp</dimen>
+    <dimen name="horizontal_gap">1dp</dimen>
+    <dimen name="key_padding">3dp</dimen>
+    <dimen name="corner_radius">2dp</dimen>
+</resources>

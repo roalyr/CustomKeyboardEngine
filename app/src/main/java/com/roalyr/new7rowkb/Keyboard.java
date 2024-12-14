@@ -70,12 +70,13 @@ public class Keyboard {
     public static final int EDGE_RIGHT = 0x02;
     public static final int EDGE_TOP = 0x04;
     public static final int EDGE_BOTTOM = 0x08;
-    public static final int KEYCODE_SHIFT = -1;
+    // Disabled
+   /* public static final int KEYCODE_SHIFT = -1;
     public static final int KEYCODE_MODE_CHANGE = -2;
     public static final int KEYCODE_CANCEL = -3;
     public static final int KEYCODE_DONE = -4;
     public static final int KEYCODE_DELETE = -5;
-    public static final int KEYCODE_ALT = -6;
+    public static final int KEYCODE_ALT = -6;*/
 
     /** Keyboard label **/
     private CharSequence mLabel;
@@ -211,8 +212,17 @@ public class Keyboard {
      * @attr ref android.R.styleable#Keyboard_Key_popupCharacters
      * @attr ref android.R.styleable#Keyboard_Key_keyOutputText
      * @attr ref android.R.styleable#Keyboard_Key_keyEdgeFlags
+     * @attr ref android.R.styleable#Keyboard_Key_keyRowEdgeFlags
+     * @attr ref android.R.styleable#Keyboard_Key_keyLabelSmall
+     * @attr ref android.R.styleable#Keyboard_Key_isCompound
+     *
      */
     public static class Key {
+        // Custom key parameters.
+        public int rowEdgeFlags;
+        public CharSequence labelSmall;
+        public boolean isCompound; // TODO: redundant?
+
         /**
          * All the key codes (unicode or custom code) that this key could generate, zero'th
          * being the most important.
@@ -371,6 +381,14 @@ public class Keyboard {
             }
             label = a.getText(R.styleable.Keyboard_Key_keyLabel);
             text = a.getText(R.styleable.Keyboard_Key_keyOutputText);
+
+            // Custom key params.
+            rowEdgeFlags = a.getInt(R.styleable.Keyboard_Key_keyRowEdgeFlags, 0);
+            labelSmall = a.getText(R.styleable.Keyboard_Key_keyLabelSmall);
+
+            // TODO: maybe redundant?
+            isCompound = a.getBoolean(R.styleable.Keyboard_Key_isCompound, false);
+
 
             a.recycle();
         }
@@ -778,8 +796,8 @@ public class Keyboard {
                         inKey = true;
                         key = createKeyFromXml(res, currentRow, x, y, parser);
                         mKeys.add(key);
-
-                        if (key.codes != null && key.codes.length > 0) {
+// Disabled
+/*                        if (key.codes != null && key.codes.length > 0) {
                             if (key.codes[0] == KEYCODE_SHIFT) {
                                 // Find available shift key slot and put this shift key in it
                                 for (int i = 0; i < mShiftKeys.length; i++) {
@@ -793,7 +811,7 @@ public class Keyboard {
                             } else if (key.codes[0] == KEYCODE_ALT) {
                                 mModifierKeys.add(key);
                             }
-                        }
+                        }*/
                         currentRow.mKeys.add(key);
                     } else if (TAG_KEYBOARD.equals(tag)) {
                         parseKeyboardAttributes(res, parser);

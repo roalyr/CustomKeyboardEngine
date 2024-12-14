@@ -11,8 +11,11 @@
         android:visibility="visible"
         android:background="@color/keyboard_background"
         app:keyBackground="@drawable/key_background"
+        app:keyBackgroundTop="@drawable/key_background_top"
+        app:keyBackgroundBottom="@drawable/key_background_bottom"
         app:keyBackgroundModifier="@drawable/key_background_modifier"
         app:keyTextColor="@color/key_text_color"
+        app:keySmallTextColor="@color/key_small_text_color"
         app:shadowColor="@android:color/transparent"
         />
 
@@ -23,8 +26,11 @@
         android:visibility="visible"
         android:background="@color/keyboard_background"
         app:keyBackground="@drawable/key_background"
+        app:keyBackgroundTop="@drawable/key_background_top"
+        app:keyBackgroundBottom="@drawable/key_background_bottom"
         app:keyBackgroundModifier="@drawable/key_background_modifier"
         app:keyTextColor="@color/key_text_color"
+        app:keySmallTextColor="@color/key_small_text_color"
         app:shadowColor="@android:color/transparent"
         />
 

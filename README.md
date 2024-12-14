@@ -7,8 +7,8 @@
 - Suitable for any screen, has floating mode (like Gboard).
 
 ## Screenshots
-![floating mode portrait](doc/screen_floating)
-![floating mode landscape](doc/screen_floating_landscape)
+![floating mode portrait](doc/screen_floating.png)
+![floating mode landscape](doc/screen_floating_landscape.png)
 
 ## TODO
 - Implement simple layout scrolling.

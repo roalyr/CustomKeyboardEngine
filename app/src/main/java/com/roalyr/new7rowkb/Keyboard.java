@@ -31,6 +31,8 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
 import android.util.Xml;
+
+import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -620,6 +622,22 @@ public class Keyboard {
         mTotalHeight = y + mDefaultHeight;
         rows.add(row);
     }
+
+    // Custom.
+    public Keyboard(Context context, XmlPullParser parser) {
+        mDisplayWidth = context.getResources().getDisplayMetrics().widthPixels;
+        mDisplayHeight = context.getResources().getDisplayMetrics().heightPixels;
+        mDefaultHorizontalGap = 0;
+        mDefaultWidth = mDisplayWidth / 10;
+        mDefaultVerticalGap = 0;
+        mDefaultHeight = mDefaultWidth;
+        mKeys = new ArrayList<Key>();
+        mModifierKeys = new ArrayList<Key>();
+        mKeyboardMode = 0; // Default mode
+        loadKeyboard(context, (XmlResourceParser) parser); // Use the provided parser
+    }
+
+
     final void resize(int newWidth, int newHeight) {
         int numRows = rows.size();
         for (int rowIndex = 0; rowIndex < numRows; ++rowIndex) {

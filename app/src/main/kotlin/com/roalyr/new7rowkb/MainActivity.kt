@@ -30,6 +30,10 @@ import com.roalyr.new7rowkb.ui.theme.New7rowKBTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Force ask for permissions
+        sendBroadcast(Intent(Constants.ACTION_CHECK_STORAGE_PERMISSIONS))
+        sendBroadcast(Intent(Constants.ACTION_CHECK_OVERLAY_PERMISSION))
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {

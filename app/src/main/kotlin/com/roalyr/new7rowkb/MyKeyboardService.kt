@@ -1,16 +1,16 @@
 package com.roalyr.new7rowkb
 
+import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.inputmethodservice.InputMethodService
 import android.net.Uri
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
@@ -19,7 +19,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
-import android.widget.Toast
+import androidx.core.content.ContextCompat
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 
 class MyKeyboardService : InputMethodService() {
 
@@ -41,37 +44,26 @@ class MyKeyboardService : InputMethodService() {
 
     private var isReceiverRegistered = false
 
-    private val overlayPermissionReceiver = OverlayPermissionReceiver()
-    private val handler = Handler(Looper.getMainLooper())
-
     private var isShiftPressed = false
     private var isCtrlPressed = false
     private var isAltPressed = false
     private var isCapsPressed = false
 
-    companion object {
-        private const val ACTION_MANAGE_OVERLAY_PERMISSION = "android.settings.action.MANAGE_OVERLAY_PERMISSION"
-        const val KEYBOARD_MINIMAL_WIDTH = 500
-        const val KEYBOARD_MINIMAL_HEIGHT = 500
-        const val KEYBOARD_TRANSLATION_INCREMENT = 50
-        const val KEYBOARD_TRANSLATION_TOP_OFFSET = 20
-        const val KEYBOARD_TRANSLATION_BOTTOM_OFFSET = 40
-        const val KEYBOARD_SCALE_INCREMENT = 50
-        const val NOT_A_KEY = -1
-        // Custom keycodes.
-        const val KEYCODE_CLOSE_FLOATING_KEYBOARD = -10
-        const val KEYCODE_OPEN_FLOATING_KEYBOARD = -11
-        const val KEYCODE_SWITCH_KEYBOARD_MODE = -12
-        const val KEYCODE_ENLARGE_FLOATING_KEYBOARD = -13
-        const val KEYCODE_SHRINK_FLOATING_KEYBOARD = -14
-        const val KEYCODE_ENLARGE_FLOATING_KEYBOARD_VERT = -15
-        const val KEYCODE_SHRINK_FLOATING_KEYBOARD_VERT = -16
-        const val KEYCODE_MOVE_FLOATING_KEYBOARD_LEFT = -17
-        const val KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT = -18
-        const val KEYCODE_MOVE_FLOATING_KEYBOARD_UP = -19
-        const val KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN = -20
+    private val overlayPermissionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == Constants.ACTION_CHECK_OVERLAY_PERMISSION) {
+                checkAndRequestOverlayPermission()
+            }
+        }
     }
 
+    private val storagePermissionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == Constants.ACTION_CHECK_STORAGE_PERMISSIONS) {
+                checkAndRequestStoragePermissions()
+            }
+        }
+    }
 
     ////////////////////////////////////////////
     // Init the keyboard
@@ -112,12 +104,24 @@ class MyKeyboardService : InputMethodService() {
         super.onCreate()
         initWindowManager()
         createInputView()
-        checkAndRequestOverlayPermission()
+
+        // Register broadcast receivers
+        registerReceiver(overlayPermissionReceiver, IntentFilter(Constants.ACTION_CHECK_OVERLAY_PERMISSION), RECEIVER_NOT_EXPORTED)
+        registerReceiver(storagePermissionReceiver, IntentFilter(Constants.ACTION_CHECK_STORAGE_PERMISSIONS), RECEIVER_NOT_EXPORTED)
+
+        // Force ask for permissions
+        sendBroadcast(Intent(Constants.ACTION_CHECK_STORAGE_PERMISSIONS))
+        sendBroadcast(Intent(Constants.ACTION_CHECK_OVERLAY_PERMISSION))
+
+        copyDefaultKeyboardLayout()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterOverlayPermissionReceiver()
+        // Unregister broadcast receivers
+        unregisterReceiver(overlayPermissionReceiver)
+        unregisterReceiver(storagePermissionReceiver)
+
         closeAllKeyboards()
     }
 
@@ -153,36 +157,42 @@ class MyKeyboardService : InputMethodService() {
     ////////////////////////////////////////////
     // Handle window creation and inflation
     private fun createFloatingKeyboard() {
+        // Check if overlay permission is granted
+        if (Settings.canDrawOverlays(this)) {
+            inputView?.findViewById<View>(R.id.placeholder_view)?.requestFocus()
 
-        inputView?.findViewById<View>(R.id.placeholder_view)?.requestFocus()
+            // Check screen width every time to keep window size within
+            screenWidth = getScreenWidth()
+            floatingKeyboardView =
+                layoutInflater.inflate(R.layout.floating_keyboard_view, null) as? KeyboardView
+            val keyboardView = floatingKeyboardView
+            if (keyboardView != null) {
+                keyboardView.keyboard = Keyboard(this, R.xml.keyboard_default)
 
-        // Check screen width every time to keep window size within
-        screenWidth = getScreenWidth()
-        floatingKeyboardView =
-            layoutInflater.inflate(R.layout.floating_keyboard_view, null) as? KeyboardView
-        val keyboardView = floatingKeyboardView
-        if (keyboardView != null) {
-            keyboardView.keyboard = Keyboard(this, R.xml.keyboard)
+                val params = WindowManager.LayoutParams(
+                    floatingKeyboardWidth,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    floatingKeyboardPosX,
+                    floatingKeyboardPosY,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                    PixelFormat.TRANSLUCENT
+                )
 
-            val params = WindowManager.LayoutParams(
-                floatingKeyboardWidth,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                floatingKeyboardPosX,
-                floatingKeyboardPosY,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                PixelFormat.TRANSLUCENT
-            )
+                windowManager.addView(keyboardView, params)
+                floatingKeyboardView?.post {
+                    floatingKeyboardHeight = floatingKeyboardView!!.measuredHeight
+                }
 
-            windowManager.addView(keyboardView, params)
-            floatingKeyboardView?.post {
-                floatingKeyboardHeight = floatingKeyboardView!!.measuredHeight
+                setKeyboardActionListener(keyboardView)
+                isFloatingKeyboardOpen = true
+            } else {
+                Log.e("MyKeyboardService", "Failed to inflate floating keyboard view")
             }
-
-            setKeyboardActionListener(keyboardView)
-            isFloatingKeyboardOpen = true
         } else {
-            Log.e("MyKeyboardService", "Failed to inflate floating keyboard view")
+            // Permission denied, handle accordingly (e.g., show a message or request permission)
+            // You might want to show a message to the user or redirect them to the settings to grant the permission
+            Log.e("MyKeyboardService", "Overlay permission denied")
         }
     }
 
@@ -209,19 +219,28 @@ class MyKeyboardService : InputMethodService() {
     }
 
     private fun createStandardKeyboard(): View? {
-        val inputView = inputView
-        if (inputView != null) {
-            keyboardView = inputView.findViewById(R.id.keyboard_view)
-            val keyboardView = keyboardView
-            if (keyboardView != null) {
-                keyboardView.keyboard = Keyboard(this, R.xml.keyboard)
-                setKeyboardActionListener(keyboardView)
-                return inputView
-            } else {
-                Log.e("MyKeyboardService", "Keyboard view not found in input view")
+        val inputView = inputView // Get the input view
+        val keyboardView = inputView?.findViewById<KeyboardView>(R.id.keyboard_view) // Find the KeyboardView
+        if (keyboardView != null) {
+            try {
+                val customLayoutFile = File(getExternalFilesDir(null), "New7rowKB/layouts/keyboard-default.xml")
+                if (customLayoutFile.exists()) {
+                    // Load custom layout if it exists
+                    val parser = resources.getXml(Uri.fromFile(customLayoutFile).path!!.toInt()) // Use resources.getXml()
+                    keyboardView.keyboard = Keyboard(this, parser)
+                } else {
+                    // Load default layout as backup
+                    keyboardView.keyboard = Keyboard(this, R.xml.keyboard_default) // Use R.xml.keyboard
+                }
+            } catch (e: Exception) {
+                Log.e("MyKeyboardService", "Failed to load custom keyboard layout", e)
+                keyboardView.keyboard = Keyboard(this, R.xml.keyboard_default) // Backup option
             }
+
+            setKeyboardActionListener(keyboardView)
+            return inputView
         } else {
-            Log.e("MyKeyboardService", "Input view is null")
+            Log.e("MyKeyboardService", "Keyboard view is null") // More specific error message
         }
         return null
     }
@@ -332,7 +351,7 @@ class MyKeyboardService : InputMethodService() {
         if (floatingKeyboardView != null && isFloatingKeyboardOpen) {
             floatingKeyboardWidth += increment
             floatingKeyboardWidth =
-                floatingKeyboardWidth.coerceIn(KEYBOARD_MINIMAL_WIDTH, screenWidth)
+                floatingKeyboardWidth.coerceIn(Constants.KEYBOARD_MINIMAL_WIDTH, screenWidth)
 
             // Update layout parameters and apply to the view
             // TODO: a poor workaround to mitigate flickering.
@@ -367,7 +386,7 @@ class MyKeyboardService : InputMethodService() {
             val density = resources.displayMetrics.density
 
             // Convert dp offsets to pixel offsets
-            val bottomOffsetPx = KEYBOARD_TRANSLATION_BOTTOM_OFFSET * density
+            val bottomOffsetPx = Constants.KEYBOARD_TRANSLATION_BOTTOM_OFFSET * density
 
             // Keep some space in the bottom and top
             val coerceTop = (-(screenHeight / 2.0  - floatingKeyboardHeight / 2.0)).toInt()
@@ -515,7 +534,7 @@ class MyKeyboardService : InputMethodService() {
     private fun handleKey(primaryCode: Int, keyCodes: IntArray?, label: CharSequence?,modifiedMetaState: Int) {
 
         // Manually apply metaState to the key event if key code is written in xml.
-        if (primaryCode != NOT_A_KEY) {
+        if (primaryCode != Constants.NOT_A_KEY) {
             injectKeyEvent(primaryCode, modifiedMetaState)
         } else {
             // If no key codes for a key - attempt to get key code from label.
@@ -544,32 +563,32 @@ class MyKeyboardService : InputMethodService() {
 
     private fun handleCustomKey(primaryCode: Int, keyCodes: IntArray?, label: CharSequence?)  {
         // Handle custom key codes related to this application.
-        if (primaryCode != NOT_A_KEY) {
+        if (primaryCode != Constants.NOT_A_KEY) {
             when (primaryCode) {
 
-                KEYCODE_CLOSE_FLOATING_KEYBOARD -> {
+                Constants.KEYCODE_CLOSE_FLOATING_KEYBOARD -> {
                     if (isFloatingKeyboardOpen) {
                         closeFloatingKeyboard()
                     }
                 }
 
-                KEYCODE_OPEN_FLOATING_KEYBOARD -> {
+                Constants.KEYCODE_OPEN_FLOATING_KEYBOARD -> {
                     if (!isFloatingKeyboardOpen) {
                         createFloatingKeyboard()
                     }
                 }
 
-                KEYCODE_SWITCH_KEYBOARD_MODE -> switchKeyboardMode()
-                KEYCODE_ENLARGE_FLOATING_KEYBOARD -> resizeFloatingKeyboard(+KEYBOARD_SCALE_INCREMENT)
-                KEYCODE_SHRINK_FLOATING_KEYBOARD -> resizeFloatingKeyboard(-KEYBOARD_SCALE_INCREMENT)
-                KEYCODE_MOVE_FLOATING_KEYBOARD_LEFT -> translateFloatingKeyboard(-KEYBOARD_TRANSLATION_INCREMENT)
-                KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT -> translateFloatingKeyboard(
-                    KEYBOARD_TRANSLATION_INCREMENT
+                Constants.KEYCODE_SWITCH_KEYBOARD_MODE -> switchKeyboardMode()
+                Constants.KEYCODE_ENLARGE_FLOATING_KEYBOARD -> resizeFloatingKeyboard(+Constants.KEYBOARD_SCALE_INCREMENT)
+                Constants.KEYCODE_SHRINK_FLOATING_KEYBOARD -> resizeFloatingKeyboard(-Constants.KEYBOARD_SCALE_INCREMENT)
+                Constants.KEYCODE_MOVE_FLOATING_KEYBOARD_LEFT -> translateFloatingKeyboard(-Constants.KEYBOARD_TRANSLATION_INCREMENT)
+                Constants.KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT -> translateFloatingKeyboard(
+                    Constants.KEYBOARD_TRANSLATION_INCREMENT
                 )
 
-                KEYCODE_MOVE_FLOATING_KEYBOARD_UP -> translateVertFloatingKeyboard(-KEYBOARD_TRANSLATION_INCREMENT)
-                KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN -> translateVertFloatingKeyboard(
-                    KEYBOARD_TRANSLATION_INCREMENT
+                Constants.KEYCODE_MOVE_FLOATING_KEYBOARD_UP -> translateVertFloatingKeyboard(-Constants.KEYBOARD_TRANSLATION_INCREMENT)
+                Constants.KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN -> translateVertFloatingKeyboard(
+                    Constants.KEYBOARD_TRANSLATION_INCREMENT
                 )
 
             }
@@ -630,7 +649,7 @@ class MyKeyboardService : InputMethodService() {
         updateKeyLabels(isAltPressed, KeyEvent.KEYCODE_ALT_LEFT)
         updateKeyLabels(isAltPressed, KeyEvent.KEYCODE_ALT_RIGHT)
         updateKeyLabels(isCapsPressed, KeyEvent.KEYCODE_CAPS_LOCK)
-        updateKeyLabels(isFloatingKeyboard, KEYCODE_SWITCH_KEYBOARD_MODE)
+        updateKeyLabels(isFloatingKeyboard, Constants.KEYCODE_SWITCH_KEYBOARD_MODE)
     }
 
     private fun updateKeyLabels(isKeyToggled: Boolean, toggledKeyCode: Int) {
@@ -739,37 +758,61 @@ class MyKeyboardService : InputMethodService() {
 
 
     ////////////////////////////////////////////
+    // Handle files
+    private fun ensureLayoutsDirectoryExists(): Boolean {
+        val layoutsDir = File(getExternalFilesDir(null), "New7rowKB/layouts")
+        if (!layoutsDir.exists()) {
+            return layoutsDir.mkdirs()
+        }
+        return true
+    }
+
+    private fun copyDefaultKeyboardLayout() {
+        if (!ensureLayoutsDirectoryExists()) {
+            Log.e("MyKeyboardService", "Failed to create layouts directory")
+            return
+        }
+
+        val defaultLayoutFile = File(getExternalFilesDir(null), "New7rowKB/layouts/keyboard-default.xml")
+        if (!defaultLayoutFile.exists()) {
+            try {
+                val inputStream = resources.openRawResource(R.raw.keyboard)
+                val outputStream = FileOutputStream(defaultLayoutFile)
+                val buffer = ByteArray(1024)
+                var length: Int
+                while (inputStream.read(buffer).also { length = it } > 0) {
+                    outputStream.write(buffer, 0, length)
+                }
+                outputStream.close()
+                inputStream.close()
+            } catch (e: IOException) {
+                Log.e("MyKeyboardService", "Failed to copy default keyboard layout", e)
+            }
+        }
+    }
+
+    ////////////////////////////////////////////
     // Ask for permission
     private fun checkAndRequestOverlayPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
-            registerReceiver(overlayPermissionReceiver, IntentFilter(ACTION_MANAGE_OVERLAY_PERMISSION), RECEIVER_EXPORTED) // Use this as context
-            isReceiverRegistered = true // Set the flag after registering
-            startActivity(intent)
+            // Start permission request activity
+            val intent = Intent(this, PermissionRequestActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            intent.putExtra(Constants.EXTRA_PERMISSION_TYPE, Constants.PERMISSION_TYPE_OVERLAY) // Add extra to specify permission type
+            ContextCompat.startActivity(this, intent, null)
         }
     }
 
-    private fun unregisterOverlayPermissionReceiver() {
-        if (isReceiverRegistered) {
-            unregisterReceiver(overlayPermissionReceiver)
-            isReceiverRegistered = false
+    private fun checkAndRequestStoragePermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+
+            // Start permission request activity
+            val intent = Intent(this, PermissionRequestActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK // Add this line
+            ContextCompat.startActivity(this, intent, null)
         }
     }
 
-    inner class OverlayPermissionReceiver : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(context)) {
-                // Permission granted, show the floating keyboard
-                val inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                inputMethodManager.showInputMethodPicker()
-            } else {
-                // Permission denied, show a message or take other action
-                Toast.makeText(context, "Overlay permission denied", Toast.LENGTH_SHORT).show()
-                // You might also consider disabling keyboard functionality or showing a more prominent message
-            }
-            // No need to unregister the receiver here
-        }
-    }
+
 }

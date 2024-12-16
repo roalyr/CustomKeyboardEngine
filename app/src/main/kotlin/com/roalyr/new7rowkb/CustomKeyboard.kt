@@ -33,7 +33,10 @@ data class Key(
     val labelSmall: String? = null,
     val codesLongPress: Int? = null,
     val rowEdgeFlags: String? = null, // Determines key alignment (e.g., "bottom", "top").
-    val repeatable: Boolean = false
+    val repeatable: Boolean = false,
+
+    var x: Int = 0, // Calculated during layout
+    var y: Int = 0,  // Calculated during layout
 )
 
 // Extension function for dp-to-px conversion
@@ -47,23 +50,45 @@ class CustomKeyboard(private val context: Context, layout: KeyboardLayout) {
     private val defaultWidth: Int = layout.defaultWidth.toPx(displayMetrics)
     private val defaultHeight: Int = layout.defaultHeight.toPx(displayMetrics)
     private val horizontalGap: Int = layout.horizontalGap.toPx(displayMetrics)
-    private val verticalGap: Int = layout.verticalGap.toPx(displayMetrics)
+    val verticalGap: Int = layout.verticalGap.toPx(displayMetrics)
 
-    private val rows: List<Row> = layout.rows.map { createRow(it) }
     private val drawableCache = mutableMapOf<String, Drawable?>()
 
-    private fun createRow(rowData: Row): Row {
-        return rowData.copy(keys = rowData.keys.map { createKey(it) })
+    private val rows: List<Row> = buildRows(layout.rows)
+    private val keys: List<Key> = rows.flatMap { it.keys }
+
+    private fun buildRows(rowDataList: List<Row>): List<Row> {
+        var currentY = 0
+        return rowDataList.map { row ->
+            val (newRow, nextY) = createRow(row, currentY)
+            currentY = nextY
+            newRow
+        }
     }
 
-    private fun createKey(keyData: Key): Key {
-        val iconDrawable = keyData.icon?.let { loadDrawable(it) }
-        return keyData.copy(
-            icon = iconDrawable?.toString(),
-            width = keyData.width?.toPx(displayMetrics) ?: defaultWidth,
-            height = keyData.height?.toPx(displayMetrics) ?: defaultHeight,
-            gap = keyData.gap?.toPx(displayMetrics) ?: horizontalGap
-        )
+    private fun createRow(rowData: Row, startY: Int): Pair<Row, Int> {
+        var currentX = 0
+        val keys = rowData.keys.map { key ->
+            val keyWidth = key.width?.toPx(displayMetrics) ?: defaultWidth
+            val keyHeight = key.height?.toPx(displayMetrics) ?: defaultHeight
+            val keyGap = key.gap?.toPx(displayMetrics) ?: horizontalGap
+
+            // Load icon if needed
+            val iconDrawable = key.icon?.let { loadDrawable(it) }
+
+            val newKey = key.copy(
+                x = currentX,
+                y = startY,
+                width = keyWidth,
+                height = keyHeight,
+                gap = keyGap,
+                icon = iconDrawable?.toString()
+            )
+            currentX += keyWidth + keyGap
+            newKey
+        }
+        val rowHeight = (rowData.keys.maxOfOrNull { it.height?.toPx(displayMetrics) ?: defaultHeight } ?: defaultHeight)
+        return rowData.copy(keys = keys) to (startY + rowHeight + verticalGap)
     }
 
     private fun loadDrawable(assetPath: String): Drawable? {
@@ -93,6 +118,25 @@ class CustomKeyboard(private val context: Context, layout: KeyboardLayout) {
             else -> value.toIntOrNull() ?: defValue
         }
     }
+
+    fun getKeyAt(x: Int, y: Int): Key? {
+        return rows.flatMap { it.keys }.find { key ->
+            val keyRight = key.x + (key.width ?: defaultWidth)
+            val keyBottom = key.y + (key.height ?: defaultHeight)
+            x in key.x until keyRight && y in key.y until keyBottom
+        }
+    }
+
+    fun getAllKeys(): List<Key> = keys
+
+    fun logKeys() {
+        rows.forEachIndexed { rowIndex, row ->
+            row.keys.forEachIndexed { keyIndex, key ->
+                println("Row $rowIndex, Key $keyIndex: Code=${key.code}, Position=(${key.x}, ${key.y}), Size=(${key.width}, ${key.height})")
+            }
+        }
+    }
+
 
 
     companion object {

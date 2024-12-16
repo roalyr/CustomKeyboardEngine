@@ -208,7 +208,6 @@ public class KeyboardView extends View implements View.OnClickListener {
     private Drawable mKeyBackgroundModifier;
     private static final int REPEAT_INTERVAL = 50; // ~20 keys per second
     private static final int REPEAT_START_DELAY = 400;
-    private static final int LONGPRESS_TIMEOUT = ViewConfiguration.getLongPressTimeout();
     private static int MAX_NEARBY_KEYS = 12;
     private int[] mDistances = new int[MAX_NEARBY_KEYS];
     // For multi-tap
@@ -240,6 +239,8 @@ public class KeyboardView extends View implements View.OnClickListener {
     public boolean isLongPressing() {
         return mIsLongPressing;
     }
+    private static final int LONGPRESS_TIMEOUT = 250;
+
 
     Handler mHandler;
 
@@ -559,11 +560,10 @@ public class KeyboardView extends View implements View.OnClickListener {
         dismissPopupKeyboard();
     }
     private CharSequence adjustCase(CharSequence label) {
-        // Disabled. TODO: Optionally?
-//        if (mKeyboard.isShifted() && label != null && label.length() < 3
-//                && Character.isLowerCase(label.charAt(0))) {
-//            label = label.toString().toUpperCase();
-//        }
+        if (mKeyboard.isShifted() && label != null && label.length() < 3
+                && Character.isLowerCase(label.charAt(0))) {
+            label = label.toString().toUpperCase();
+        }
         return label;
     }
     @Override

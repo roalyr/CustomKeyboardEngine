@@ -27,6 +27,7 @@ import android.content.res.XmlResourceParser;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.text.TextUtils;
+import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
@@ -622,21 +623,6 @@ public class Keyboard {
         mTotalHeight = y + mDefaultHeight;
         rows.add(row);
     }
-
-    // Custom.
-    public Keyboard(Context context, XmlPullParser parser) {
-        mDisplayWidth = context.getResources().getDisplayMetrics().widthPixels;
-        mDisplayHeight = context.getResources().getDisplayMetrics().heightPixels;
-        mDefaultHorizontalGap = 0;
-        mDefaultWidth = mDisplayWidth / 10;
-        mDefaultVerticalGap = 0;
-        mDefaultHeight = mDefaultWidth;
-        mKeys = new ArrayList<Key>();
-        mModifierKeys = new ArrayList<Key>();
-        mKeyboardMode = 0; // Default mode
-        loadKeyboard(context, (XmlResourceParser) parser); // Use the provided parser
-    }
-
 
     final void resize(int newWidth, int newHeight) {
         int numRows = rows.size();

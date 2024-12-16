@@ -9,7 +9,6 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.inputmethodservice.InputMethodService
-import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.util.DisplayMetrics
@@ -219,31 +218,32 @@ class MyKeyboardService : InputMethodService() {
     }
 
     private fun createStandardKeyboard(): View? {
-        val inputView = inputView // Get the input view
-        val keyboardView = inputView?.findViewById<KeyboardView>(R.id.keyboard_view) // Find the KeyboardView
+        val inputView = inputView
+        val keyboardView = inputView?.findViewById<KeyboardView>(R.id.keyboard_view)
         if (keyboardView != null) {
-            try {
-                val customLayoutFile = File(getExternalFilesDir(null), "New7rowKB/layouts/keyboard-default.xml")
-                if (customLayoutFile.exists()) {
-                    // Load custom layout if it exists
-                    val parser = resources.getXml(Uri.fromFile(customLayoutFile).path!!.toInt()) // Use resources.getXml()
-                    keyboardView.keyboard = Keyboard(this, parser)
-                } else {
-                    // Load default layout as backup
-                    keyboardView.keyboard = Keyboard(this, R.xml.keyboard_default) // Use R.xml.keyboard
-                }
+            val customKeyboard = try {
+                val json = resources.openRawResource(R.raw.keyboard_default)
+                    .bufferedReader().use { it.readText() }
+                CustomKeyboard.fromJson(this, json) // Create CustomKeyboard from JSON
             } catch (e: Exception) {
-                Log.e("MyKeyboardService", "Failed to load custom keyboard layout", e)
-                keyboardView.keyboard = Keyboard(this, R.xml.keyboard_default) // Backup option
+                Log.e("MyKeyboardService", "Error loading JSON keyboard: ${e.message}")
+                null
             }
 
-            setKeyboardActionListener(keyboardView)
-            return inputView
+            if (customKeyboard != null) {
+                // Assuming you've adapted KeyboardView to work with CustomKeyboard
+                keyboardView.keyboard = customKeyboard // TODO: link to KeyboardView properly
+                setKeyboardActionListener(keyboardView) // Assuming this is adapted for CustomKeyboard
+                return inputView
+            } else {
+                Log.e("MyKeyboardService", "Failed to create keyboard")
+            }
         } else {
-            Log.e("MyKeyboardService", "Keyboard view is null") // More specific error message
+            Log.e("MyKeyboardService", "Keyboard view is null")
         }
         return null
     }
+
 
     private fun createPlaceholderKeyboard(): View? {
         val inputView = inputView

@@ -17,7 +17,6 @@
         <Key
             app:keyLabel="1"
             app:keyLabelSmall="!"
-            app:keyEdgeFlags="left"
             />
         <Key
             app:keyLabel="2"

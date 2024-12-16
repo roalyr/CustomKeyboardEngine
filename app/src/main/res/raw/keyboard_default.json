@@ -1,0 +1,216 @@
+{
+  "defaultHeight": "@dimen/key_height",
+  "horizontalGap": "@dimen/horizontal_gap",
+  "verticalGap": "@dimen/vertical_gap",
+  "rows": [
+    {
+      "rowEdgeFlags": "top",
+      "keys": [
+        {
+          "label": "Esc",
+          "codes": 111,
+          "modifier": true,
+          "edgeFlags": "left"
+        },
+        { "label": "1", "labelSmall": "!" },
+        { "label": "2", "labelSmall": "@" },
+        { "label": "3", "labelSmall": "#" },
+        { "label": "4", "labelSmall": "$" },
+        { "label": "5", "labelSmall": "%" },
+        { "label": "6", "labelSmall": "^" },
+        { "label": "7", "labelSmall": "&" },
+        { "label": "8", "labelSmall": "*" },
+        { "label": "9", "labelSmall": "(" },
+        { "label": "0", "labelSmall": ")" },
+        {
+          "label": "Del",
+          "codes": 112,
+          "modifier": true,
+          "repeatable": true,
+          "edgeFlags": "right"
+        }
+      ]
+    },
+    {
+      "keys": [
+        {
+          "label": "Tab",
+          "codes": 61,
+          "edgeFlags": "left",
+          "modifier": true,
+          "width": "15%p"
+        },
+        { "label": "`", "labelSmall": "~" },
+        { "label": "[", "labelSmall": "{" },
+        { "label": "]", "labelSmall": "}" },
+        { "label": "'", "labelSmall": "\"" },
+        { "label": "\\", "labelSmall": "|" },
+        { "label": "-", "labelSmall": "_" },
+        { "label": "=", "labelSmall": "+" },
+        {
+          "icon": "@drawable/ic_clear_vector",
+          "codes": 67,
+          "edgeFlags": "right",
+          "modifier": true,
+          "repeatable": true,
+          "width": "15%p"
+        }
+      ]
+    },
+    {
+      "keys": [
+        { "label": "q", "edgeFlags": "left" },
+        { "label": "w" },
+        { "label": "e" },
+        { "label": "r" },
+        { "label": "t" },
+        { "label": "y" },
+        { "label": "u" },
+        { "label": "i" },
+        { "label": "o" },
+        { "label": "p", "edgeFlags": "right" }
+      ]
+    },
+    {
+      "keys": [
+        { "label": "a", "edgeFlags": "left" },
+        { "label": "s" },
+        { "label": "d" },
+        { "label": "f" },
+        { "label": "g" },
+        { "label": "h" },
+        { "label": "j" },
+        { "label": "k" },
+        { "label": "l" },
+        { "label": ";", "labelSmall": ":", "edgeFlags": "right" }
+      ]
+    },
+    {
+      "keys": [
+        { "label": "z", "edgeFlags": "left" },
+        { "label": "x" },
+        { "label": "c" },
+        { "label": "v" },
+        { "label": "b" },
+        { "label": "n" },
+        { "label": "m" },
+        { "label": ",", "labelSmall": "<" },
+        { "label": ".", "labelSmall": ">" },
+        { "label": "/", "labelSmall": "?", "edgeFlags": "right" }
+      ]
+    },
+    {
+      "keys": [
+        {
+          "label": "shf",
+          "codes": 59,
+          "sticky": true,
+          "width": "12%p",
+          "modifier": true,
+          "edgeFlags": "left"
+        },
+        {
+          "label": "ctl",
+          "codes": 113,
+          "sticky": true,
+          "width": "12%p",
+          "modifier": true
+        },
+        {
+          "label": "alt",
+          "codes": 57,
+          "sticky": true,
+          "width": "12%p",
+          "modifier": true
+        },
+        {
+          "label": " ",
+          "codes": 62,
+          "width": "28%p",
+          "repeatable": true,
+          "compound": true,
+          "rowEdgeFlags": "top"
+        },
+        {
+          "label": "edt",
+          "labelSmall": "emj",
+          "width": "12%p",
+          "codes": -1,
+          "codesLongPress": -1,
+          "modifier": true
+        },
+        {
+          "label": "▲",
+          "width": "12%p",
+          "codes": 19,
+          "modifier": true,
+          "repeatable": true
+        },
+        {
+          "label": "Ent",
+          "codes": 66,
+          "width": "12%p",
+          "modifier": true,
+          "edgeFlags": "right"
+        }
+      ]
+    },
+    {
+      "rowEdgeFlags": "bottom",
+      "keys": [
+        {
+          "label": "flt",
+          "codes": -12,
+          "width": "12%p",
+          "modifier": true,
+          "edgeFlags": "left"
+        },
+        {
+          "label": "cap",
+          "codes": 115,
+          "sticky": true,
+          "width": "12%p",
+          "modifier": true
+        },
+        {
+          "label": "lyt",
+          "labelSmall": "num",
+          "width": "12%p",
+          "codes": -1,
+          "codesLongPress": -1,
+          "modifier": true
+        },
+        {
+          "label": " ",
+          "codes": 62,
+          "width": "28%p",
+          "repeatable": true,
+          "compound": true,
+          "rowEdgeFlags": "bottom"
+        },
+        {
+          "label": "◀",
+          "width": "12%p",
+          "codes": 21,
+          "modifier": true,
+          "repeatable": true
+        },
+        {
+          "label": "▼",
+          "width": "12%p",
+          "codes": 20,
+          "modifier": true,
+          "repeatable": true
+        },
+        {
+          "label": "▶",
+          "width": "12%p",
+          "codes": 22,
+          "modifier": true,
+          "edgeFlags": "right",
+          "repeatable": true
+        }
+      ]
+    }
+  ]
+}

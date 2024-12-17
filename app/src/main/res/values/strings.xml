@@ -1,6 +1,3 @@
 <resources>
-    <string name="question_symbol">&#63;</string>
-    <string name="at_symbol">&#64;</string>
-    <string name="hash_symbol">&#38;</string>
     <string name="app_name">New7rowKB</string>
 </resources>

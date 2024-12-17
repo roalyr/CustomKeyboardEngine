@@ -1,0 +1,68 @@
+{
+  "defaultWidth": 50,
+  "defaultHeight": 50,
+  "horizontalGap": 5,
+  "verticalGap": 5,
+  "rows": [
+    {
+      "keys": [
+        {
+          "label": "flt",
+          "codes": -12,
+          "modifier": true,
+          "keyEdgeFlags": "left",
+          "width": "15%p"
+        },
+        {
+          "icon": "drawable/reshot_icon_zoom_in",
+          "codes": -13,
+          "modifier": false,
+          "repeatable": true
+        },
+        {
+          "icon": "drawable/reshot_icon_zoom_out",
+          "codes": -14,
+          "modifier": false,
+          "repeatable": true
+        },
+        {
+          "icon": "drawable/reshot_icon_left_bold_arrow",
+          "codes": -17,
+          "modifier": false,
+          "repeatable": true
+        },
+        {
+          "icon": "drawable/reshot_icon_right_bold_arrow",
+          "codes": -18,
+          "modifier": false,
+          "repeatable": true
+        },
+        {
+          "icon": "drawable/reshot_icon_up_bold_arrow",
+          "codes": -19,
+          "modifier": false,
+          "repeatable": true
+        },
+        {
+          "icon": "drawable/reshot_icon_down_bold_arrow",
+          "codes": -20,
+          "modifier": false,
+          "repeatable": true
+        },
+        {
+          "icon": "drawable/reshot_icon_eye",
+          "codes": -11,
+          "modifier": true,
+          "width": "12%p"
+        },
+        {
+          "icon": "drawable/reshot_icon_eye_disabled",
+          "codes": -10,
+          "modifier": true,
+          "width": "12%p",
+          "keyEdgeFlags": "right"
+        }
+      ]
+    }
+  ]
+}

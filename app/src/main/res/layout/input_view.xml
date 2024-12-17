@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
-    <com.roalyr.new7rowkb.KeyboardView xmlns:app="http://schemas.android.com/apk/res-auto"
+    <com.roalyr.new7rowkb.CustomKeyboardView xmlns:app="http://schemas.android.com/apk/res-auto"
         android:id="@+id/keyboard_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -19,8 +19,8 @@
         app:shadowColor="@android:color/transparent"
         />
 
-    <com.roalyr.new7rowkb.KeyboardView xmlns:app="http://schemas.android.com/apk/res-auto"
-        android:id="@+id/placeholder_view"
+    <com.roalyr.new7rowkb.CustomKeyboardView xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/service_keyboard_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:visibility="visible"

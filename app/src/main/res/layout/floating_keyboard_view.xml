@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.roalyr.new7rowkb.KeyboardView
+<com.roalyr.new7rowkb.CustomKeyboardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
@@ -15,4 +15,4 @@
     app:keySmallTextColor="@color/key_small_text_color"
     app:shadowColor="@android:color/transparent"
     >
-</com.roalyr.new7rowkb.KeyboardView>
+</com.roalyr.new7rowkb.CustomKeyboardView>

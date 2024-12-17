@@ -1,15 +1,17 @@
 package com.roalyr.new7rowkb
+
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.PorterDuff
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Message
 import android.util.AttributeSet
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
-import java.lang.ref.WeakReference
 
 class CustomKeyboardView @JvmOverloads constructor(
     context: Context,
@@ -18,8 +20,6 @@ class CustomKeyboardView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     interface OnKeyboardActionListener {
-        fun onPress(primaryCode: Int)
-        fun onRelease(primaryCode: Int)
         fun onKey(primaryCode: Int, keyCodes: IntArray, label: CharSequence?)
         fun onText(text: CharSequence)
     }
@@ -27,141 +27,244 @@ class CustomKeyboardView @JvmOverloads constructor(
     private var mKeyboardActionListener: OnKeyboardActionListener? = null
     private var mKeyboard: CustomKeyboard? = null
     private var mKeys: List<Key>? = null
-    private var mKeyboardChanged: Boolean = false
+    private var mBuffer: Bitmap? = null
+    private var mCanvas: Canvas? = null
+    private var mPaint: Paint = Paint()
+    private var mHandler: Handler? = null
+
+    private var mDrawPending: Boolean = false
     private var mAbortKey: Boolean = false
     private var mDefaultVerticalGap: Int = 0
     private var shifted: Boolean = false
 
-    private var mPaint: Paint
-    private var mPadding: Rect = Rect(0, 0, 0, 0)
-    private var mKeyBackground: Drawable? = null
-    private var mKeyBackgroundModifier: Drawable? = null
-    private var mVerticalCorrection: Int = 0
-    private var keyTextSize: Int = 18
-    private var mKeyTextColor: Int = 0xFF000000.toInt()
-    private var mLabelTextSize: Int = 14
-    private var mShadowColor: Int = 0
-    private var mShadowRadius: Float = 0f
-    private var mKeySmallTextColor: Int = 0xFF000000.toInt()
-    private var mKeyBackgroundTop: Drawable? = null
-    private var mKeyBackgroundBottom: Drawable? = null
+    private var mLastKeyIndex = -1
+    private var mCurrentKeyIndex = -1
+    private var mDownKeyIndex = -1
 
-    private val mHandler = CustomKeyboardHandler(this)
+    private var repeatKeyIndex = -1
 
-    companion object {
-        const val MSG_SHOW_PREVIEW = 1
-        const val MSG_REMOVE_PREVIEW = 2
-        const val MSG_REPEAT = 3
-        const val MSG_LONGPRESS = 4
-        const val REPEAT_INTERVAL = 50
+    private var isLongPressHandled = false
+    private var repeatKeyRunnable: Runnable? = null
+    private val repeatDelay = 50L
+
+    private val keyTextColor = context.resources.getColor(R.color.key_text_color, null)
+    private val keySmallTextColor = context.resources.getColor(R.color.key_small_text_color, null)
+    private val keyBackgroundColor = context.resources.getColor(R.color.key_background_color, null)
+    private val keyModifierBackgroundColor = context.resources.getColor(R.color.key_background_color_modifier, null)
+
+    // Icon cache to prevent repeated resource lookups
+    private val iconCache = mutableMapOf<String, Drawable?>()
+
+    // Start repeating a key
+    private fun startKeyRepeat(key: Key) {
+        repeatKeyRunnable = object : Runnable {
+            override fun run() {
+                mKeyboardActionListener?.onKey(key.codes, intArrayOf(key.codes), key.label)
+                mHandler?.postDelayed(this, repeatDelay)
+            }
+        }
+        mHandler?.postDelayed(repeatKeyRunnable!!, LONGPRESS_TIMEOUT.toLong())
     }
 
-    init {
-        val a = context.obtainStyledAttributes(attrs, R.styleable.KeyboardView, defStyleAttr, 0)
-
-        mKeyBackground = a.getDrawable(R.styleable.KeyboardView_keyBackground)
-        mKeyBackgroundModifier = a.getDrawable(R.styleable.KeyboardView_keyBackgroundModifier)
-        mVerticalCorrection = a.getDimensionPixelOffset(R.styleable.KeyboardView_verticalCorrection, 0)
-        keyTextSize = a.getDimensionPixelSize(R.styleable.KeyboardView_keyTextSize, 18)
-        mKeyTextColor = a.getColor(R.styleable.KeyboardView_keyTextColor, 0xFF000000.toInt())
-        mLabelTextSize = a.getDimensionPixelSize(R.styleable.KeyboardView_labelTextSize, 14)
-        mShadowColor = a.getColor(R.styleable.KeyboardView_shadowColor, 0)
-        mShadowRadius = a.getFloat(R.styleable.KeyboardView_shadowRadius, 0f)
-
-        // Custom attributes
-        mKeySmallTextColor = a.getColor(R.styleable.KeyboardView_keySmallTextColor, 0xFF000000.toInt())
-        mKeyBackgroundTop = a.getDrawable(R.styleable.KeyboardView_keyBackgroundTop)
-        mKeyBackgroundBottom = a.getDrawable(R.styleable.KeyboardView_keyBackgroundBottom)
-
-        // Initialize padding from key background
-        mKeyBackground?.getPadding(mPadding)
-
-        a.recycle()
-
-        mPaint = Paint().apply {
-            isAntiAlias = true
-            textSize = keyTextSize.toFloat()
-            textAlign = Paint.Align.CENTER
-            alpha = 255
+    // Schedule a long press
+    private fun scheduleLongPress(key: Key) {
+        mHandler?.obtainMessage(MSG_LONGPRESS, key.codesLongPress, 0)?.let {
+            mHandler?.sendMessageDelayed(
+                it,
+                LONGPRESS_TIMEOUT.toLong()
+            )
         }
     }
 
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        // Handler is initialized as static, no need for re-initialization
+    private fun cancelRepeatKey() {
+        repeatKeyRunnable?.let {
+            mHandler?.removeCallbacks(it)
+        }
+        repeatKeyRunnable = null
+    }
+
+    companion object {
+        private const val TAG = "CustomKeyboardView"
+        private const val MSG_LONGPRESS = 4
+        private const val LONGPRESS_TIMEOUT = 500
+    }
+
+    init {
+        mPaint.isAntiAlias = true
+        mPaint.textAlign = Paint.Align.CENTER
+        mPaint.alpha = 255
+        setupHandler()
+    }
+
+    fun setKeyboard(keyboard: CustomKeyboard) {
+        mKeyboard = keyboard
+        mKeys = keyboard.getAllKeys()
+        invalidateAllKeys()
     }
 
     fun setOnKeyboardActionListener(listener: OnKeyboardActionListener) {
         mKeyboardActionListener = listener
     }
 
-    fun setKeyboard(keyboard: CustomKeyboard) {
-        if (mKeyboard != null) {
-            showKey(-1) // Hide preview
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        mBuffer = null
+        mKeyboard?.resize(w, h)
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        if (mDrawPending || mBuffer == null) {
+            onBufferDraw()
         }
-        mKeyboard = keyboard
-        mKeys = keyboard.getAllKeys()
-        requestLayout()
-        mKeyboardChanged = true
-        invalidate() // Redraw keys
-        mAbortKey = true // Cancel pending keys
-        mDefaultVerticalGap = keyboard.verticalGap // Custom vertical gap
+        canvas.drawBitmap(mBuffer!!, 0f, 0f, null)
     }
 
-    fun isShifted(): Boolean {
-        return shifted
+    private fun onBufferDraw() {
+        val width = Math.max(1, width)
+        val height = Math.max(1, height)
+        if (mBuffer == null || mBuffer!!.width != width || mBuffer!!.height != height) {
+            mBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            mCanvas = Canvas(mBuffer!!)
+        }
+        mCanvas?.drawColor(0, PorterDuff.Mode.CLEAR)
+
+        mKeys?.forEach { key ->
+            drawKey(mCanvas!!, key)
+        }
+        mDrawPending = false
     }
 
-    fun setShifted(shifted: Boolean) {
-        this.shifted = shifted
-    }
+    private fun drawKey(canvas: Canvas, key: Key) {
+        val keyBounds = Rect(key.x, key.y, key.x + key.width, key.y + key.height)
 
-    fun toggleShift() {
-        shifted = !shifted
-    }
+        // Draw background color
+        mPaint.color = if (key.modifier) keyModifierBackgroundColor else keyBackgroundColor
+        canvas.drawRect(keyBounds, mPaint)
 
-    private fun adjustCase(label: CharSequence?): CharSequence? {
-        return if (isShifted() && label != null && label.length < 3 && Character.isLowerCase(label[0])) {
-            label.toString().uppercase()
-        } else {
-            label
+        // Draw icon if present
+        key.icon?.let { iconName ->
+            val drawable = getIconDrawable(iconName)
+            drawable?.let {
+                val iconSize = (key.height * 0.6).toInt() // Icon size at 60% of key height
+                val iconLeft = key.x + (key.width - iconSize) / 2
+                val iconTop = key.y + (key.height - iconSize) / 2
+                it.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize)
+                it.draw(canvas)
+                return // If icon is drawn, skip further label drawing
+            }
+        }
+
+        // Draw small label if available
+        key.labelSmall?.let { smallLabel ->
+            mPaint.color = keySmallTextColor
+            mPaint.textSize = key.height * 0.2f
+            canvas.drawText(
+                smallLabel,
+                key.x + key.width / 2f,
+                key.y + key.height * 0.3f, // Position small label above the primary label
+                mPaint
+            )
+        }
+
+        // Draw primary label
+        key.label?.let { label ->
+            mPaint.color = keyTextColor
+            mPaint.textSize = key.height * 0.4f
+            canvas.drawText(
+                label,
+                key.x + key.width / 2f,
+                key.y + key.height * 0.65f, // Lower to leave space for the small label
+                mPaint
+            )
         }
     }
 
-    private fun showKey(keyIndex: Int) {
-        Log.d("CustomKeyboardView", "Showing key: $keyIndex")
+    // Helper function to fetch drawable icons
+    private fun getIconDrawable(iconName: String): Drawable? {
+        return iconCache.getOrPut(iconName) {
+            val resId = context.resources.getIdentifier(iconName, "drawable", context.packageName)
+            if (resId != 0) context.getDrawable(resId) else null
+        }
     }
 
-    private fun hideKeyPreview() {
-        Log.d("CustomKeyboardView", "Hiding key preview")
-    }
 
-    private fun repeatKey(): Boolean {
-        Log.d("CustomKeyboardView", "Repeating key")
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        val action = event.action
+        val touchX = event.x.toInt()
+        val touchY = event.y.toInt()
+
+        when (action) {
+            MotionEvent.ACTION_DOWN -> handleTouchDown(touchX, touchY)
+            MotionEvent.ACTION_MOVE -> handleTouchMove(touchX, touchY)
+            MotionEvent.ACTION_UP -> handleTouchUp(touchX, touchY)
+        }
         return true
     }
 
-    private fun handleLongPress(event: MotionEvent) {
-        Log.d("CustomKeyboardView", "Handling long press at (${event.x}, ${event.y})")
-    }
+    private fun handleTouchDown(x: Int, y: Int) {
+        val key = mKeyboard?.getKeyAt(x, y)
+        if (key != null) {
+            mDownKeyIndex = mKeys?.indexOf(key) ?: -1
+            isLongPressHandled = false
 
-    private fun resetMultiTap() {
-        // Implement multi-tap logic if needed
-    }
-
-    private class CustomKeyboardHandler(view: CustomKeyboardView) : Handler() {
-        private val viewRef = WeakReference(view)
-
-        override fun handleMessage(msg: Message) {
-            val view = viewRef.get() ?: return
-            when (msg.what) {
-                MSG_SHOW_PREVIEW -> view.showKey(msg.arg1)
-                MSG_REMOVE_PREVIEW -> view.hideKeyPreview()
-                MSG_REPEAT -> if (view.repeatKey()) {
-                    sendMessageDelayed(obtainMessage(MSG_REPEAT), REPEAT_INTERVAL.toLong())
-                }
-                MSG_LONGPRESS -> view.handleLongPress(msg.obj as MotionEvent)
+            if (key.repeatable) {
+                startKeyRepeat(key)
+            } else {
+                scheduleLongPress(key)
             }
+        }
+    }
+
+    private fun handleTouchMove(x: Int, y: Int) {
+        // Optional: Cancel repeat/long press if the finger moves off the key
+        if (mKeyboard?.getKeyAt(x, y) == null) {
+            cancelRepeatKey()
+            mHandler?.removeMessages(MSG_LONGPRESS)
+        }
+    }
+
+    fun isLongPressing(): Boolean {
+        return isLongPressHandled
+    }
+
+
+    private fun handleTouchUp(x: Int, y: Int) {
+        cancelRepeatKey()
+        mHandler?.removeMessages(MSG_LONGPRESS)
+        isLongPressHandled = false // Reset long-press state
+        mDownKeyIndex = -1
+    }
+
+
+    private fun setupHandler() {
+        mHandler = object : Handler() {
+            override fun handleMessage(msg: Message) {
+                if (msg.what == MSG_LONGPRESS && !isLongPressHandled) {
+                    val key = mKeyboard?.getKeyByCode(msg.arg1)
+                    key?.let {
+                        mKeyboardActionListener?.onKey(it.codesLongPress, intArrayOf(it.codesLongPress), it.labelSmall)
+                        isLongPressHandled = true
+                    }
+                }
+            }
+        }
+    }
+
+    fun invalidateAllKeys() {
+        mBuffer = null
+        invalidate()
+    }
+}
+
+// Updated CustomKeyboard method:
+fun CustomKeyboard.resize(newWidth: Int, newHeight: Int) {
+    rows.forEach { row ->
+        var x = 0
+        val scaleFactor = newWidth / row.keys.sumOf { it.width + it.gap }.toFloat()
+        row.keys.forEach { key ->
+            key.width = (key.width * scaleFactor).toInt()
+            key.x = x
+            x += key.width + key.gap
         }
     }
 }

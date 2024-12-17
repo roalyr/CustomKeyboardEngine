@@ -2,12 +2,5 @@
 <resources>
     <style name="AppTheme">
         <item name="android:background">@color/keyboard_background</item>
-        <item name="keyBackground">@drawable/key_background</item>
-        <item name="keyTextSize">22sp</item>
-        <item name="keyTextColor">@color/key_text_color</item>
-        <item name="labelTextSize">14sp</item>
-        <item name="verticalCorrection">-10dp</item>
-        <item name="shadowColor">@android:color/transparent</item>
-        <item name="shadowRadius">2.75</item>
     </style>
 </resources>

@@ -7,9 +7,9 @@ class Constants {
         const val ACTION_CHECK_STORAGE_PERMISSIONS = "com.roalyr.new7rowkb.CHECK_STORAGE_PERMISSIONS"
         const val ACTION_MANAGE_OVERLAY_PERMISSION = "android.settings.action.MANAGE_OVERLAY_PERMISSION"
         //Permissions.
-        const val EXTRA_PERMISSION_TYPE = "permission_type"
-        const val PERMISSION_TYPE_STORAGE = 1
-        const val PERMISSION_TYPE_OVERLAY = 2
+        const val EXTRA_PERMISSION_TYPE = "EXTRA_PERMISSION_TYPE"
+        const val PERMISSION_TYPE_OVERLAY = "PERMISSION_TYPE_OVERLAY"
+        const val PERMISSION_TYPE_STORAGE = "PERMISSION_TYPE_STORAGE"
         const val REQUEST_CODE_STORAGE_PERMISSIONS = 1001
         const val REQUEST_CODE_OVERLAY_PERMISSION = 1002
         // Keyboard internals.

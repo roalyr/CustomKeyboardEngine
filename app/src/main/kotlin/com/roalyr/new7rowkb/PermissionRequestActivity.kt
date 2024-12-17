@@ -14,7 +14,7 @@ class PermissionRequestActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val permissionType = intent.getIntExtra(Constants.EXTRA_PERMISSION_TYPE, Constants.PERMISSION_TYPE_STORAGE)
+        val permissionType = intent.getStringExtra(Constants.EXTRA_PERMISSION_TYPE) ?: Constants.PERMISSION_TYPE_STORAGE
 
         when (permissionType) {
             Constants.PERMISSION_TYPE_STORAGE -> {

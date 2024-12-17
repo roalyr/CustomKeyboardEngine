@@ -8,8 +8,8 @@
         android:topLeftRadius="0dp"
         android:topRightRadius="0dp" />
     <padding
-        android:left="@dimen/key_padding"
-        android:top="@dimen/key_padding"
-        android:right="@dimen/key_padding"
-        android:bottom="@dimen/key_padding"/>
+        android:left="3dp"
+        android:top="3dp"
+        android:right="3dp"
+        android:bottom="3dp"/>
 </shape>

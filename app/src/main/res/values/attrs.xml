@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="Theme"></declare-styleable>
+    <declare-styleable name="KeyboardView">
+        <attr name="keyboardViewStyle" format="reference" />
+        <attr name="keyBackground" format="reference" />
+        <attr name="keyBackgroundModifier" format="reference" />
+        <attr name="keyTextSize" format="dimension" />
+        <attr name="labelTextSize" format="dimension" />
+        <attr name="keyTextColor" format="color" />
+        <attr name="keySmallTextColor" format="color" />
+        <attr name="keyBackgroundTop" format="reference" />
+        <attr name="keyBackgroundBottom" format="reference" />
+    </declare-styleable>
+
+</resources>

@@ -2,10 +2,10 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <solid android:color="@color/key_background_color_modifier" />
-    <corners android:radius="@dimen/corner_radius" />
+    <corners android:radius="3dp" />
     <padding
-        android:left="@dimen/key_padding"
-        android:top="@dimen/key_padding"
-        android:right="@dimen/key_padding"
-        android:bottom="@dimen/key_padding"/>
+        android:left="3dp"
+        android:top="3dp"
+        android:right="3dp"
+        android:bottom="3dp"/>
 </shape>

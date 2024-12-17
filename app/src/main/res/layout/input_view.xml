@@ -2,7 +2,11 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:descendantFocusability="blocksDescendants"
+    android:clickable="false"
+    android:focusable="false"
+    >
 
     <com.roalyr.new7rowkb.CustomKeyboardView xmlns:app="http://schemas.android.com/apk/res-auto"
         android:id="@+id/keyboard_view"
@@ -16,7 +20,6 @@
         app:keyBackgroundModifier="@drawable/key_background_modifier"
         app:keyTextColor="@color/key_text_color"
         app:keySmallTextColor="@color/key_small_text_color"
-        app:shadowColor="@android:color/transparent"
         />
 
     <com.roalyr.new7rowkb.CustomKeyboardView xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -31,7 +34,6 @@
         app:keyBackgroundModifier="@drawable/key_background_modifier"
         app:keyTextColor="@color/key_text_color"
         app:keySmallTextColor="@color/key_small_text_color"
-        app:shadowColor="@android:color/transparent"
         />
 
 </LinearLayout>

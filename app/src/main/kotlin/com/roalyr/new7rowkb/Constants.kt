@@ -1,5 +1,7 @@
 package com.roalyr.new7rowkb
 
+import android.os.Environment
+
 class Constants {
     companion object{
         // Actions.
@@ -32,5 +34,14 @@ class Constants {
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT = -18
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_UP = -19
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN = -20
+
+        // Paths
+        // Base App Directory
+        val APP_DIRECTORY: String
+            get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)}/New7rowKB"
+
+        // Layouts subdirectory
+        val LAYOUTS_DIRECTORY: String
+            get() = "$APP_DIRECTORY/layouts"
     }
 }

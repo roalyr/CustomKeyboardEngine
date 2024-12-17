@@ -2,5 +2,8 @@
 <resources>
     <style name="AppTheme">
         <item name="android:background">@color/keyboard_background</item>
+        <item name="keyBackground">@drawable/key_background</item>
+        <item name="keyTextSize">22sp</item>
+        <item name="keyTextColor">@color/key_text_color</item>
     </style>
 </resources>

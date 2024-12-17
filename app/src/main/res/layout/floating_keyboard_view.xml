@@ -13,6 +13,5 @@
     app:keyBackgroundModifier="@drawable/key_background_modifier"
     app:keyTextColor="@color/key_text_color"
     app:keySmallTextColor="@color/key_small_text_color"
-    app:shadowColor="@android:color/transparent"
     >
 </com.roalyr.new7rowkb.CustomKeyboardView>

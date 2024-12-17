@@ -1,9 +1,11 @@
 {
-  "defaultHeight": "@dimen/key_height",
-  "horizontalGap": "@dimen/horizontal_gap",
-  "verticalGap": "@dimen/vertical_gap",
+  "defaultWidth": 10,
+  "defaultHeight": 10,
+  "horizontalGap": 1,
+  "verticalGap": 1,
   "rows": [
     {
+      "height": 50,
       "rowEdgeFlags": "top",
       "keys": [
         {
@@ -32,13 +34,14 @@
       ]
     },
     {
+      "height": 50,
       "keys": [
         {
           "label": "Tab",
           "codes": 61,
           "edgeFlags": "left",
           "modifier": true,
-          "width": "15%p"
+          "width": 15
         },
         { "label": "`", "labelSmall": "~" },
         { "label": "[", "labelSmall": "{" },
@@ -53,11 +56,12 @@
           "edgeFlags": "right",
           "modifier": true,
           "repeatable": true,
-          "width": "15%p"
+          "width": 15
         }
       ]
     },
     {
+      "height": 50,
       "keys": [
         { "label": "q", "edgeFlags": "left" },
         { "label": "w" },
@@ -72,6 +76,7 @@
       ]
     },
     {
+      "height": 50,
       "keys": [
         { "label": "a", "edgeFlags": "left" },
         { "label": "s" },
@@ -86,6 +91,7 @@
       ]
     },
     {
+      "height": 50,
       "keys": [
         { "label": "z", "edgeFlags": "left" },
         { "label": "x" },
@@ -100,12 +106,13 @@
       ]
     },
     {
+      "height": 50,
       "keys": [
         {
           "label": "shf",
           "codes": 59,
           "sticky": true,
-          "width": "12%p",
+          "width": 12,
           "modifier": true,
           "edgeFlags": "left"
         },
@@ -113,20 +120,20 @@
           "label": "ctl",
           "codes": 113,
           "sticky": true,
-          "width": "12%p",
+          "width": 12,
           "modifier": true
         },
         {
           "label": "alt",
           "codes": 57,
           "sticky": true,
-          "width": "12%p",
+          "width": 12,
           "modifier": true
         },
         {
           "label": " ",
           "codes": 62,
-          "width": "28%p",
+          "width": 28,
           "repeatable": true,
           "compound": true,
           "rowEdgeFlags": "top"
@@ -134,14 +141,14 @@
         {
           "label": "edt",
           "labelSmall": "emj",
-          "width": "12%p",
+          "width": 12,
           "codes": -1,
           "codesLongPress": -1,
           "modifier": true
         },
         {
           "label": "▲",
-          "width": "12%p",
+          "width": 12,
           "codes": 19,
           "modifier": true,
           "repeatable": true
@@ -149,19 +156,20 @@
         {
           "label": "Ent",
           "codes": 66,
-          "width": "12%p",
+          "width": 12,
           "modifier": true,
           "edgeFlags": "right"
         }
       ]
     },
     {
+      "height": 50,
       "rowEdgeFlags": "bottom",
       "keys": [
         {
           "label": "flt",
           "codes": -12,
-          "width": "12%p",
+          "width": 12,
           "modifier": true,
           "edgeFlags": "left"
         },
@@ -169,13 +177,13 @@
           "label": "cap",
           "codes": 115,
           "sticky": true,
-          "width": "12%p",
+          "width": 12,
           "modifier": true
         },
         {
           "label": "lyt",
           "labelSmall": "num",
-          "width": "12%p",
+          "width": 12,
           "codes": -1,
           "codesLongPress": -1,
           "modifier": true
@@ -183,28 +191,28 @@
         {
           "label": " ",
           "codes": 62,
-          "width": "28%p",
+          "width": 28,
           "repeatable": true,
           "compound": true,
           "rowEdgeFlags": "bottom"
         },
         {
           "label": "◀",
-          "width": "12%p",
+          "width": 12,
           "codes": 21,
           "modifier": true,
           "repeatable": true
         },
         {
           "label": "▼",
-          "width": "12%p",
+          "width": 12,
           "codes": 20,
           "modifier": true,
           "repeatable": true
         },
         {
           "label": "▶",
-          "width": "12%p",
+          "width": 12,
           "codes": 22,
           "modifier": true,
           "edgeFlags": "right",

@@ -18,24 +18,26 @@ data class KeyboardLayout(
 
 @Serializable
 data class Row(
-    val keys: List<Key>
+    val keys: List<Key>,
+    var height: Int = 50,
 )
 
 @Serializable
 data class Key(
-    var codes: Int,
-    var codesLongPress: Int,
-    var repeatable: Boolean,
-    var modifier: Boolean,
+    var codes: Int = -1,
+    var codesLongPress: Int = -1,
+    var repeatable: Boolean = false,
+    var modifier: Boolean = false,
     var label: String? = null,
     var labelSmall: String? = null,
     var icon: String? = null,
-    var width: Int = 50,
-    var height: Int = 50,
-    var gap: Int = 5,
-    var x: Int = 0,
-    var y: Int = 0
+    var width: Int = 15,     // Default percentage width
+    var height: Int = 15,    // Default percentage height
+    var gap: Int = 2,        // Default percentage gap
+    var x: Int = 0,          // Percentage-based x position
+    var y: Int = 0           // Percentage-based y position
 )
+
 
 fun Int.toPx(displayMetrics: DisplayMetrics): Int = (this * displayMetrics.density + 0.5f).toInt()
 
@@ -65,19 +67,17 @@ class CustomKeyboard(private val context: Context, layout: KeyboardLayout) {
             var currentX = 0
             val keys = row.keys.map { key ->
                 val newKey = key.copy(
-                    width = key.width.toPx(displayMetrics),
-                    height = key.height.toPx(displayMetrics),
-                    gap = key.gap.toPx(displayMetrics),
                     x = currentX,
                     y = currentY
                 )
-                currentX += newKey.width + newKey.gap
+                currentX += newKey.width + newKey.gap // Width and gap are percentages
                 newKey
             }
-            currentY += keys.maxOf { it.height }
+            currentY += 15 // Default key height percentage increment
             Row(keys)
         }
     }
+
 
     fun resize(newWidth: Int, newHeight: Int) {
         rows.forEach { row ->
@@ -92,10 +92,12 @@ class CustomKeyboard(private val context: Context, layout: KeyboardLayout) {
     }
 
     fun getKeyAt(x: Int, y: Int): Key? {
-        return rows.flatMap { it.keys }.find { key ->
-            x in key.x until key.x + key.width && y in key.y until key.y + key.height
+        return getAllKeys().firstOrNull { key ->
+            x >= key.x && x < key.x + key.width &&
+                    y >= key.y && y < key.y + key.height
         }
     }
+
 
     fun getAllKeys(): List<Key> {
         return rows.flatMap { it.keys }

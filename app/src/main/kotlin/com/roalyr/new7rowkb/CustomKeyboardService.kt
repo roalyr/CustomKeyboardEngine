@@ -18,7 +18,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
+import android.widget.Toast
 import androidx.core.content.ContextCompat
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -161,6 +163,7 @@ class CustomKeyboardService : InputMethodService() {
         inputView = layoutInflater.inflate(R.layout.input_view, null)
     }
 
+
     private fun initWindowManager() {
         if (::windowManager.isInitialized) return // Check if already initialized
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
@@ -225,11 +228,29 @@ class CustomKeyboardService : InputMethodService() {
     private fun createStandardKeyboard(): View? {
         inputView?.let { rootView ->
             keyboardView = rootView.findViewById(R.id.keyboard_view) as? CustomKeyboardView
+
             keyboardView?.let { view ->
+                Log.d(TAG, "Keyboard view initialized successfully.")
+
+                // Load the keyboard layout from JSON
                 val customKeyboard = loadKeyboardFromJson(R.raw.keyboard_default)
+
                 if (customKeyboard != null) {
+                    Log.d(TAG, "Keyboard layout loaded successfully: ${customKeyboard.rows.size} rows")
+
+                    // Debug: Log details of the keyboard layout
+                    customKeyboard.rows.forEachIndexed { rowIndex, row ->
+                        row.keys.forEachIndexed { keyIndex, key ->
+                            Log.d(TAG, "Row $rowIndex, Key $keyIndex: label=${key.label}, x=${key.x}, y=${key.y}, width=${key.width}, height=${key.height}")
+                        }
+                    }
+
                     view.setKeyboard(customKeyboard)
+
+                    // Set keyboard action listener
                     setKeyboardActionListener(view)
+                    Log.d(TAG, "Keyboard action listener set.")
+
                     return rootView
                 } else {
                     Log.e(TAG, "Failed to load standard keyboard layout")
@@ -238,6 +259,7 @@ class CustomKeyboardService : InputMethodService() {
         } ?: Log.e(TAG, "Input view is null")
         return null
     }
+
 
     ////////////////////////////////////////////
     // Unified method for keyboard switching
@@ -304,14 +326,25 @@ class CustomKeyboardService : InputMethodService() {
     // Helper functions
     private fun loadKeyboardFromJson(resourceId: Int): CustomKeyboard? {
         return try {
-            val json = resources.openRawResource(resourceId)
-                .bufferedReader().use { it.readText() }
-            CustomKeyboard.fromJson(this, json)
+            val inputStream = resources.openRawResource(resourceId)
+            val jsonContent = inputStream.bufferedReader().use { it.readText() }
+
+            // Use a Json instance that ignores unknown keys
+            val json = Json { ignoreUnknownKeys = true }
+
+            // Decode JSON into KeyboardLayout
+            val keyboardLayout = json.decodeFromString<KeyboardLayout>(jsonContent)
+            Log.d(TAG, "Successfully loaded KeyboardLayout: ${keyboardLayout.rows.size} rows")
+
+            // Return a CustomKeyboard instance
+            CustomKeyboard(this, keyboardLayout)
         } catch (e: Exception) {
             Log.e(TAG, "Error loading JSON keyboard: ${e.message}")
+            Toast.makeText(this, "Error loading keyboard: ${e.message}", Toast.LENGTH_LONG).show()
             null
         }
     }
+
 
     private fun invalidateAllKeysOnBothKeyboards() {
         floatingKeyboardView?.invalidateAllKeys()
@@ -440,6 +473,8 @@ class CustomKeyboardService : InputMethodService() {
                         } else {
                             metaState
                         }
+                        // Update all meta states in the view
+                        keyboardView.updateMetaState(isShiftPressed, isCtrlPressed, isAltPressed, isCapsPressed)
                         handleKey(primaryCode, keyCodes, label, modifiedMetaState)
                         resetMetaStates()
                     }
@@ -663,25 +698,16 @@ class CustomKeyboardService : InputMethodService() {
     ////////////////////////////////////////////
     // Handle files
     private fun ensureLayoutsDirectoryExists(): Boolean {
-        val layoutsDir = File(getExternalFilesDir(null), "New7rowKB/layouts")
+        val layoutsDir = File(Constants.LAYOUTS_DIRECTORY)
         if (!layoutsDir.exists()) {
             return layoutsDir.mkdirs()
         }
         return true
     }
 
-    private fun copyDefaultKeyboardLayouts() {
-        if (!ensureLayoutsDirectoryExists()) {
-            Log.e(TAG, "Failed to create layouts directory")
-            return
-        }
-
-        copyKeyboardLayoutIfMissing("keyboard-default.json", R.raw.keyboard_default)
-        copyKeyboardLayoutIfMissing("keyboard-service.json", R.raw.keyboard_service)
-    }
-
     private fun copyKeyboardLayoutIfMissing(fileName: String, rawResourceId: Int) {
-        val layoutFile = File(getExternalFilesDir(null), "New7rowKB/layouts/$fileName")
+        val layoutFile = File(Constants.LAYOUTS_DIRECTORY, fileName)
+
         if (!layoutFile.exists()) {
             try {
                 val inputStream = resources.openRawResource(rawResourceId)
@@ -700,6 +726,20 @@ class CustomKeyboardService : InputMethodService() {
         } else {
             Log.i(TAG, "$fileName already exists, skipping copy")
         }
+    }
+
+
+
+
+
+    private fun copyDefaultKeyboardLayouts() {
+        if (!ensureLayoutsDirectoryExists()) {
+            Log.e(TAG, "Failed to create layouts directory")
+            return
+        }
+
+        copyKeyboardLayoutIfMissing("keyboard-default.json", R.raw.keyboard_default)
+        copyKeyboardLayoutIfMissing("keyboard-service.json", R.raw.keyboard_service)
     }
 
 

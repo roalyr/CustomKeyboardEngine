@@ -1,8 +1,8 @@
 {
-  "defaultWidth": 50,
-  "defaultHeight": 50,
-  "horizontalGap": 5,
-  "verticalGap": 5,
+  "defaultWidth": 10,
+  "defaultHeight": 10,
+  "horizontalGap": 1,
+  "verticalGap": 1,
   "rows": [
     {
       "keys": [
@@ -11,7 +11,7 @@
           "codes": -12,
           "modifier": true,
           "keyEdgeFlags": "left",
-          "width": "15%p"
+          "width": 15
         },
         {
           "icon": "drawable/reshot_icon_zoom_in",
@@ -59,7 +59,7 @@
           "icon": "drawable/reshot_icon_eye_disabled",
           "codes": -10,
           "modifier": true,
-          "width": "12%p",
+          "width": 12,
           "keyEdgeFlags": "right"
         }
       ]

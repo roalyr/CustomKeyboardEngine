@@ -4,12 +4,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.PorterDuff
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.os.Handler
-import android.os.Message
+import android.os.Looper
 import android.util.AttributeSet
 import android.util.Log
 import android.util.TypedValue
@@ -26,19 +25,35 @@ class CustomKeyboardView @JvmOverloads constructor(
     interface OnKeyboardActionListener {
         fun onKey(primaryCode: Int, keyCodes: IntArray, label: CharSequence?)
         fun onText(text: CharSequence)
+        fun onRelease(codes: Int)
     }
 
-    private var mKeyboardActionListener: OnKeyboardActionListener? = null
-    private var mKeyboard: CustomKeyboard? = null
-    private var mKeys: List<Key>? = null
-    private var mBuffer: Bitmap? = null
-    private var mCanvas: Canvas? = null
-    private var mPaint: Paint = Paint()
-    private var mHandler: Handler? = null
+    private var keyboardActionListener: OnKeyboardActionListener? = null
+    private var keyboard: CustomKeyboard? = null
+    private var keys: List<Key>? = null
+    private var buffer: Bitmap? = null
+    private var paint: Paint = Paint()
+    private val handler = Handler(Looper.getMainLooper()) // Ensure handler uses main thread
 
-    private var mDrawPending: Boolean = false
+    private val handlerCallback = Handler.Callback { msg ->
+        if (msg.what == MSG_LONGPRESS) {
+            handleLongPress(msg.arg1) // Pass the long-press key code
+            true
+        } else {
+            false
+        }
+    }
+    private fun handleLongPress(keyCode: Int) {
+        val key = keys?.find { it.codesLongPress == keyCode } ?: return
+        isLongPressHandled = true
+        Log.d("CustomKeyboardView", "Long Press Triggered for Key: ${key.label}")
 
-    private var mDownKeyIndex = -1
+        // Dispatch the long press action to the listener
+        keyboardActionListener?.onKey(key.codesLongPress, intArrayOf(key.codesLongPress), key.label)
+    }
+
+
+    private var downKeyIndex = -1
 
     private var isLongPressHandled = false
     private var repeatKeyRunnable: Runnable? = null
@@ -57,6 +72,10 @@ class CustomKeyboardView @JvmOverloads constructor(
     private var isAltOn = false
     private var isCapsLockOn = false
 
+    private var scaleX = 1f
+    private var scaleY = 1f
+
+
     init {
         isFocusable = true
         isFocusableInTouchMode = true
@@ -68,7 +87,6 @@ class CustomKeyboardView @JvmOverloads constructor(
     }
 
     override fun dispatchTouchEvent(event: MotionEvent?): Boolean {
-        //Log.d("CustomKeyboardView", "Dispatch Touch Event: ${event?.action}")
         return super.dispatchTouchEvent(event)
     }
 
@@ -80,7 +98,7 @@ class CustomKeyboardView @JvmOverloads constructor(
         isAltOn = altOn
         isCapsLockOn = capsLockOn
 
-        mKeys?.forEach { key ->
+        keys?.forEach { key ->
             if (key.modifier) {
                 // Update meta key labels dynamically based on their state
                 key.label = key.label?.let {
@@ -112,17 +130,17 @@ class CustomKeyboardView @JvmOverloads constructor(
     private fun startKeyRepeat(key: Key) {
         repeatKeyRunnable = object : Runnable {
             override fun run() {
-                mKeyboardActionListener?.onKey(key.codes, intArrayOf(key.codes), key.label)
-                mHandler?.postDelayed(this, repeatDelay)
+                keyboardActionListener?.onKey(key.codes, intArrayOf(key.codes), key.label)
+                handler?.postDelayed(this, repeatDelay)
             }
         }
-        mHandler?.postDelayed(repeatKeyRunnable!!, LONGPRESS_TIMEOUT.toLong())
+        handler?.postDelayed(repeatKeyRunnable!!, LONGPRESS_TIMEOUT.toLong())
     }
 
     // Schedule a long press
     private fun scheduleLongPress(key: Key) {
-        mHandler?.obtainMessage(MSG_LONGPRESS, key.codesLongPress, 0)?.let {
-            mHandler?.sendMessageDelayed(
+        handler?.obtainMessage(MSG_LONGPRESS, key.codesLongPress, 0)?.let {
+            handler?.sendMessageDelayed(
                 it,
                 LONGPRESS_TIMEOUT.toLong()
             )
@@ -131,100 +149,116 @@ class CustomKeyboardView @JvmOverloads constructor(
 
     private fun cancelRepeatKey() {
         repeatKeyRunnable?.let {
-            mHandler?.removeCallbacks(it)
+            handler?.removeCallbacks(it)
         }
         repeatKeyRunnable = null
     }
 
     companion object {
         private const val TAG = "CustomKeyboardView"
-        private const val MSG_LONGPRESS = 4
-        private const val LONGPRESS_TIMEOUT = 500
+        private const val MSG_LONGPRESS = 1
+        private const val LONGPRESS_TIMEOUT = 250
     }
 
     init {
-        mPaint.isAntiAlias = true
-        mPaint.textAlign = Paint.Align.CENTER
-        mPaint.alpha = 255
-        setupHandler()
+        paint.isAntiAlias = true
+        paint.textAlign = Paint.Align.CENTER
+        paint.alpha = 255
     }
 
     fun setKeyboard(keyboard: CustomKeyboard) {
-        mKeyboard = keyboard
-        mKeys = keyboard.getAllKeys()
+        this.keyboard = keyboard
+        keys = keyboard.getAllKeys()
         invalidateAllKeys()
     }
 
     fun setOnKeyboardActionListener(listener: OnKeyboardActionListener) {
-        mKeyboardActionListener = listener
+        keyboardActionListener = listener
     }
 
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        mBuffer = null
-        mKeyboard?.resize(w, h)
-    }
+
+
+
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        val keyboard = keyboard ?: return
+        val keys = keys ?: return
 
-        val keyboard = mKeyboard ?: return // Use mKeyboard here
-        val keys = mKeys ?: return // Ensure keys are not null
-
-        if (keys.isEmpty()) {
-            Log.e("CustomKeyboardView", "No keys to render in keyboard.")
-            return
-        }
-
-        val totalWidth = width.toFloat() // Full screen width
-        val totalKeyboardHeight = keyboard.rows.sumOf { it.height.toPx(context) }.toFloat() // Sum of row heights in pixels
+        val totalWidth = width.toFloat() // View width
+        val totalHeight = height.toFloat() // View height
+        val totalLogicalHeight = keyboard.totalLogicalHeight.toFloat()
 
         var currentY = 0f
 
         keyboard.rows.forEach { row ->
-            // Convert row height from dp to pixels
-            val rowHeight = row.height.toPx(context)
-
+            // Scale row height proportionally
+            val rowHeight = (row.height / totalLogicalHeight) * totalHeight
             var currentX = 0f
-
-            // Calculate scaling factor if row width exceeds 100%
-            val totalRowWidth = row.keys.sumOf { it.width + it.gap }.toFloat()
-            val scale = if (totalRowWidth > 100f) 100f / totalRowWidth else 1f
 
             row.keys.forEach { key ->
                 // Scale key dimensions dynamically
-                val keyWidth = ((key.width * scale) / 100f) * totalWidth
+                val keyWidth = (key.width / 100f) * totalWidth
                 val keyHeight = rowHeight
+
                 val keyX = currentX
                 val keyY = currentY
 
+                // Update logical key positions for touch detection
+                key.x = (keyX / scaleX).toInt()
+                key.y = (keyY / scaleY).toInt()
+                key.width = (keyWidth / scaleX).toInt()
+                key.height = (keyHeight / scaleY).toInt()
+
                 // Draw key background
                 val keyBounds = RectF(keyX, keyY, keyX + keyWidth, keyY + keyHeight)
-                mPaint.color = if (key.modifier) keyModifierBackgroundColor else keyBackgroundColor
-                canvas.drawRect(keyBounds, mPaint)
+                paint.color = if (key.modifier) keyModifierBackgroundColor else keyBackgroundColor
+                canvas.drawRect(keyBounds, paint)
 
                 // Draw key label
                 key.label?.let { label ->
-                    mPaint.color = keyTextColor
-                    mPaint.textSize = keyHeight * 0.4f
-                    mPaint.textAlign = Paint.Align.CENTER
-                    val centerX = keyBounds.centerX()
-                    val centerY = keyBounds.centerY() + (mPaint.textSize / 3)
-                    canvas.drawText(label, centerX, centerY, mPaint)
+                    paint.color = keyTextColor
+                    paint.textSize = keyHeight * 0.4f
+                    paint.textAlign = Paint.Align.CENTER
+                    canvas.drawText(label, keyBounds.centerX(), keyBounds.centerY() + (paint.textSize / 3), paint)
                 }
 
-                // Increment x position for next key
-                currentX += keyWidth + ((key.gap * scale) / 100f) * totalWidth
+                currentX += keyWidth
             }
-
-            // Increment Y position for the next row
             currentY += rowHeight
         }
-        mKeys?.forEach { key ->
-            Log.d("CustomKeyboardView", "Key: ${key.label}, X: ${key.x}, Y: ${key.y}, Width: ${key.width}, Height: ${key.height}")
-        }
-
     }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        keyboard?.let { keyboard ->
+            scaleX = w.toFloat() / keyboard.totalLogicalWidth.toFloat()
+            scaleY = h.toFloat() / keyboard.totalLogicalHeight.toFloat()
+            Log.d(TAG, "ScaleX: $scaleX, ScaleY: $scaleY")
+        }
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        val action = event.action
+        val scaledX = (event.x / scaleX).toInt()
+        val scaledY = (event.y / scaleY).toInt()
+
+        Log.d(TAG, "Raw Touch - X: ${event.x}, Y: ${event.y}")
+        Log.d(TAG, "Scaled Touch - X: $scaledX, Y: $scaledY")
+
+        when (action) {
+            MotionEvent.ACTION_DOWN -> {
+                handleTouchDown(scaledX, scaledY)
+                performClick()
+            }
+            MotionEvent.ACTION_MOVE -> handleTouchMove(scaledX, scaledY)
+            MotionEvent.ACTION_UP -> handleTouchUp(scaledX, scaledY)
+        }
+        return true
+    }
+
+
+
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val desiredHeight = calculateKeyboardHeight(context)
@@ -253,7 +287,7 @@ class CustomKeyboardView @JvmOverloads constructor(
 
     // Helper to calculate keyboard height dynamically
     fun calculateKeyboardHeight(context: Context): Int {
-        val keyboard = mKeyboard ?: return 0
+        val keyboard = keyboard ?: return 0
         return keyboard.rows.sumOf { row -> row.height.toPx(context) }
     }
 
@@ -265,24 +299,6 @@ class CustomKeyboardView @JvmOverloads constructor(
     }
 
 
-    fun getKeyboard(): CustomKeyboard? {
-        return mKeyboard
-    }
-
-    private fun onBufferDraw() {
-        val width = Math.max(1, width)
-        val height = Math.max(1, height)
-        if (mBuffer == null || mBuffer!!.width != width || mBuffer!!.height != height) {
-            mBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            mCanvas = Canvas(mBuffer!!)
-        }
-        mCanvas?.drawColor(0, PorterDuff.Mode.CLEAR)
-
-        mKeys?.forEach { key ->
-            drawKey(mCanvas!!, key)
-        }
-        mDrawPending = false
-    }
 
     private fun drawKey(canvas: Canvas, key: Key) {
         // Total keyboard dimensions
@@ -298,8 +314,8 @@ class CustomKeyboardView @JvmOverloads constructor(
         val keyBounds = Rect(keyX.toInt(), keyY.toInt(), (keyX + keyWidth).toInt(), (keyY + keyHeight).toInt())
 
         // Draw background
-        mPaint.color = if (key.modifier) keyModifierBackgroundColor else keyBackgroundColor
-        canvas.drawRect(keyBounds, mPaint)
+        paint.color = if (key.modifier) keyModifierBackgroundColor else keyBackgroundColor
+        canvas.drawRect(keyBounds, paint)
 
         // Draw icon if present
         key.icon?.let { iconName ->
@@ -316,25 +332,25 @@ class CustomKeyboardView @JvmOverloads constructor(
 
         // Draw small label
         key.labelSmall?.let { smallLabel ->
-            mPaint.color = keySmallTextColor
-            mPaint.textSize = keyHeight * 0.2f
+            paint.color = keySmallTextColor
+            paint.textSize = keyHeight * 0.2f
             canvas.drawText(
                 smallLabel,
                 keyX + keyWidth / 2f,
                 keyY + keyHeight * 0.3f,
-                mPaint.apply { textAlign = Paint.Align.CENTER }
+                paint.apply { textAlign = Paint.Align.CENTER }
             )
         }
 
         // Draw primary label
         key.label?.let { label ->
-            mPaint.color = keyTextColor
-            mPaint.textSize = keyHeight * 0.4f
+            paint.color = keyTextColor
+            paint.textSize = keyHeight * 0.4f
             canvas.drawText(
                 label,
                 keyX + keyWidth / 2f,
                 keyY + keyHeight * 0.65f,
-                mPaint.apply { textAlign = Paint.Align.CENTER }
+                paint.apply { textAlign = Paint.Align.CENTER }
             )
         }
     }
@@ -350,63 +366,33 @@ class CustomKeyboardView @JvmOverloads constructor(
     }
 
 
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        val action = event.action
-        val touchX = event.x.toInt()
-        val touchY = event.y.toInt()
-
-        //Log.d("CustomKeyboardView", "Touch Event - Action: $action, X: $touchX, Y: $touchY")
-
-        when (action) {
-            MotionEvent.ACTION_DOWN -> {
-                Log.d("CustomKeyboardView", "Action Down detected, X: $touchX, Y: $touchY")
-                handleTouchDown(touchX, touchY)
-                performClick() // Important for accessibility
-            }
-            MotionEvent.ACTION_MOVE -> {
-                //Log.d("CustomKeyboardView", "Action Move detected")
-                handleTouchMove(touchX, touchY)
-            }
-            MotionEvent.ACTION_UP -> {
-                //Log.d("CustomKeyboardView", "Action Up detected")
-                handleTouchUp(touchX, touchY)
-            }
-            else -> {
-                Log.d("CustomKeyboardView", "Unknown Action: $action")
-            }
-        }
-        return true // Always consume the event
-    }
-
-    override fun performClick(): Boolean {
-        //Log.d("CustomKeyboardView", "performClick triggered")
-        return super.performClick()
-    }
-
-
-
     private fun handleTouchDown(x: Int, y: Int) {
-        val key = mKeyboard?.getKeyAt(x, y) ?: return // Safely retrieve the key at the given coordinates
+        Log.d("CustomKeyboardView", "handleTouchDown - Scaled Touch X: $x, Y: $y")
 
-        // Determine the index of the key being pressed
-        mDownKeyIndex = mKeys?.indexOf(key) ?: -1
+        val key = keyboard?.getKeyAt(x, y) ?: return
+        Log.d("CustomKeyboardView", "Key Pressed: ${key.label}, Bounds: X=${key.x}, Y=${key.y}, Width=${key.width}, Height=${key.height}")
+
+        downKeyIndex = keys?.indexOf(key) ?: -1
         isLongPressHandled = false
 
-        Log.d("CustomKeyboardView", "Key Pressed: ${key.label}, Repeatable: ${key.repeatable}")
+        // Trigger the key press immediately
+        keyboardActionListener?.onKey(key.codes, intArrayOf(key.codes), key.label)
 
         // Handle repeatable and long press behavior
         when {
-            key.repeatable -> startKeyRepeat(key) // Start key repeat behavior
-            else -> scheduleLongPress(key)       // Schedule a long-press check
+            key.repeatable -> startKeyRepeat(key)
+            else -> scheduleLongPress(key)
         }
     }
+
+
 
 
     private fun handleTouchMove(x: Int, y: Int) {
         // Optional: Cancel repeat/long press if the finger moves off the key
-        if (mKeyboard?.getKeyAt(x, y) == null) {
+        if (keyboard?.getKeyAt(x, y) == null) {
             cancelRepeatKey()
-            mHandler?.removeMessages(MSG_LONGPRESS)
+            handler?.removeMessages(MSG_LONGPRESS)
         }
     }
 
@@ -416,42 +402,25 @@ class CustomKeyboardView @JvmOverloads constructor(
 
 
     private fun handleTouchUp(x: Int, y: Int) {
+        Log.d("CustomKeyboardView", "handleTouchUp - X: $x, Y: $y")
+
+        // Cancel repeat and long press behavior
         cancelRepeatKey()
-        mHandler?.removeMessages(MSG_LONGPRESS)
-        isLongPressHandled = false // Reset long-press state
-        mDownKeyIndex = -1
-    }
+        handler.removeMessages(MSG_LONGPRESS)
 
-
-    private fun setupHandler() {
-        mHandler = object : Handler() {
-            override fun handleMessage(msg: Message) {
-                if (msg.what == MSG_LONGPRESS && !isLongPressHandled) {
-                    val key = mKeyboard?.getKeyByCode(msg.arg1)
-                    key?.let {
-                        mKeyboardActionListener?.onKey(it.codesLongPress, intArrayOf(it.codesLongPress), it.labelSmall)
-                        isLongPressHandled = true
-                    }
-                }
-            }
+        val key = keyboard?.getKeyAt(x, y)
+        if (key != null && !isLongPressHandled) {
+            // Handle a regular key tap if long press was not triggered
+            Log.d("CustomKeyboardView", "Key Released: ${key.label}")
+            keyboardActionListener?.onRelease(key.codes)
         }
     }
 
+
     fun invalidateAllKeys() {
-        mBuffer = null
+        buffer = null
         invalidate()
     }
 }
 
-fun CustomKeyboard.resize(newWidth: Int, newHeight: Int) {
-    rows.forEach { row ->
-        var x = 0
-        row.keys.forEach { key ->
-            // Scale key dimensions and positions based on percentages
-            key.width = (key.width / 100f * newWidth).toInt()
-            key.height = (key.height / 100f * newHeight).toInt()
-            key.x = x
-            x += key.width + (key.gap / 100f * newWidth).toInt()
-        }
-    }
-}
+

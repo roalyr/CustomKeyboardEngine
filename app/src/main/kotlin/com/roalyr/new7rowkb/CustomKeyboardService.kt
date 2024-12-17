@@ -485,6 +485,10 @@ class CustomKeyboardService : InputMethodService() {
                 currentInputConnection.commitText(text, 1)
             }
 
+            override fun onRelease(codes: Int) {
+                Log.d("CustomKeyboardService", "Key Released: Code=$codes")
+            }
+
             private fun toggleMetaState(metaState: Int, metaFlag: Int): Int {
                 return metaState xor metaFlag // XOR toggles the state
             }
@@ -577,14 +581,15 @@ class CustomKeyboardService : InputMethodService() {
     ////////////////////////////////////////////
     // Event injections
     private fun injectMetaModifierKeys(metaState: Int, action: Int) {
+        // Inject meta keys (SHIFT, CTRL, ALT) as separate key events
         if (metaState and KeyEvent.META_SHIFT_ON != 0) {
-            injectKeyEvent(action, KeyEvent.KEYCODE_SHIFT_LEFT) // Or KEYCODE_SHIFT_RIGHT
+            injectKeyEventInternal(action, KeyEvent.KEYCODE_SHIFT_LEFT, 0)
         }
         if (metaState and KeyEvent.META_CTRL_ON != 0) {
-            injectKeyEvent(action, KeyEvent.KEYCODE_CTRL_LEFT) // Or KEYCODE_CTRL_RIGHT
+            injectKeyEventInternal(action, KeyEvent.KEYCODE_CTRL_LEFT, 0)
         }
         if (metaState and KeyEvent.META_ALT_ON != 0) {
-            injectKeyEvent(action, KeyEvent.KEYCODE_ALT_LEFT) // Or KEYCODE_ALT_RIGHT
+            injectKeyEventInternal(action, KeyEvent.KEYCODE_ALT_LEFT, 0)
         }
     }
 
@@ -603,12 +608,9 @@ class CustomKeyboardService : InputMethodService() {
     private fun injectKeyEventInternal(action: Int, keyCode: Int, metaState: Int) {
         val eventTime = System.currentTimeMillis()
         val event = KeyEvent(eventTime, eventTime, action, keyCode, 0, metaState)
-        if (currentInputConnection != null) {
-            currentInputConnection?.sendKeyEvent(event)
-        } else {
-            Log.w(TAG, "CurrentInputConnection is null. Failed to send key event: $keyCode")
-        }
+        currentInputConnection?.sendKeyEvent(event) ?: Log.w(TAG, "CurrentInputConnection is null. Failed to send key event: $keyCode")
     }
+
 
     ////////////////////////////////////////////
     // Handle primary key code lookup.

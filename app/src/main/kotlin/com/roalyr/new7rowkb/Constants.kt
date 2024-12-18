@@ -34,6 +34,11 @@ class Constants {
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT = -18
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_UP = -19
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN = -20
+        // Default values.
+        const val DEFAULT_KEY_HEIGHT = 40f
+        const val DEFAULT_KEY_WIDTH = 10f
+        const val DEFAULT_ROW_GAP = 1f
+        const val DEFAULT_KEY_GAP = 1f
 
         // Paths
         // Base App Directory

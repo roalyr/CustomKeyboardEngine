@@ -1,66 +1,64 @@
 {
-  "defaultWidth": 10,
-  "defaultHeight": 10,
-  "horizontalGap": 1,
-  "verticalGap": 1,
+  "defaultKeyWidth": 10,
+  "defaultKeyHeight": 35,
+  "defaultRowGap": 0.5,
+  "defaultKeyGap": 0.1,
   "rows": [
     {
       "keys": [
         {
           "label": "flt",
-          "codes": -12,
-          "modifier": true,
-          "keyEdgeFlags": "left",
-          "width": 15
+          "keyCode": -12,
+          "isModifier": true,
+          "keyWidth": 15
         },
         {
           "icon": "drawable/reshot_icon_zoom_in",
-          "codes": -13,
-          "modifier": false,
-          "repeatable": true
+          "keyCode": -13,
+          "isModifier": false,
+          "isRepeatable": true
         },
         {
           "icon": "drawable/reshot_icon_zoom_out",
-          "codes": -14,
-          "modifier": false,
-          "repeatable": true
+          "keyCode": -14,
+          "isModifier": false,
+          "isRepeatable": true
         },
         {
           "icon": "drawable/reshot_icon_left_bold_arrow",
-          "codes": -17,
-          "modifier": false,
-          "repeatable": true
+          "keyCode": -17,
+          "isModifier": false,
+          "isRepeatable": true
         },
         {
           "icon": "drawable/reshot_icon_right_bold_arrow",
-          "codes": -18,
-          "modifier": false,
-          "repeatable": true
+          "keyCode": -18,
+          "isModifier": false,
+          "isRepeatable": true
         },
         {
           "icon": "drawable/reshot_icon_up_bold_arrow",
-          "codes": -19,
-          "modifier": false,
-          "repeatable": true
+          "keyCode": -19,
+          "isModifier": false,
+          "isRepeatable": true
         },
         {
           "icon": "drawable/reshot_icon_down_bold_arrow",
-          "codes": -20,
-          "modifier": false,
-          "repeatable": true
+          "keyCode": -20,
+          "isModifier": false,
+          "isRepeatable": true
         },
         {
           "icon": "drawable/reshot_icon_eye",
-          "codes": -11,
-          "modifier": true,
-          "width": "12%p"
+          "keyCode": -11,
+          "isModifier": true,
+          "keyWidth": 12
         },
         {
           "icon": "drawable/reshot_icon_eye_disabled",
-          "codes": -10,
-          "modifier": true,
-          "width": 12,
-          "keyEdgeFlags": "right"
+          "keyCode": -10,
+          "isModifier": true,
+          "keyWidth": 12
         }
       ]
     }

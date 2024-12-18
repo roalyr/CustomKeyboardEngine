@@ -4,13 +4,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
-import android.util.Log
 import android.util.TypedValue
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -23,62 +21,172 @@ class CustomKeyboardView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     interface OnKeyboardActionListener {
-        fun onKey(primaryCode: Int, keyCodes: IntArray, label: CharSequence?)
+        fun onKey(primaryCode: Int, label: CharSequence?)
         fun onText(text: CharSequence)
         fun onRelease(codes: Int)
     }
 
-    private var keyboardActionListener: OnKeyboardActionListener? = null
+    // Keyboard data.
     private var keyboard: CustomKeyboard? = null
     private var keys: List<Key>? = null
+
+    // Drawing.
     private var buffer: Bitmap? = null
     private var paint: Paint = Paint()
-    private val handler = Handler(Looper.getMainLooper()) // Ensure handler uses main thread
+    private val iconCache = mutableMapOf<String, Drawable?>()
 
-    private val handlerCallback = Handler.Callback { msg ->
-        if (msg.what == MSG_LONGPRESS) {
-            handleLongPress(msg.arg1) // Pass the long-press key code
-            true
-        } else {
-            false
-        }
-    }
-    private fun handleLongPress(keyCode: Int) {
-        val key = keys?.find { it.codesLongPress == keyCode } ?: return
-        isLongPressHandled = true
-        Log.d("CustomKeyboardView", "Long Press Triggered for Key: ${key.label}")
-
-        // Dispatch the long press action to the listener
-        keyboardActionListener?.onKey(key.codesLongPress, intArrayOf(key.codesLongPress), key.label)
-    }
-
-
-    private var downKeyIndex = -1
-
-    private var isLongPressHandled = false
-    private var repeatKeyRunnable: Runnable? = null
-    private val repeatDelay = 50L
-
+    // TODO: Style data, move everything into json eventually.
     private val keyTextColor = context.resources.getColor(R.color.key_text_color, null)
     private val keySmallTextColor = context.resources.getColor(R.color.key_small_text_color, null)
     private val keyBackgroundColor = context.resources.getColor(R.color.key_background_color, null)
     private val keyModifierBackgroundColor = context.resources.getColor(R.color.key_background_color_modifier, null)
 
-    // Icon cache to prevent repeated resource lookups
-    private val iconCache = mutableMapOf<String, Drawable?>()
+    // Scaling factors for rendering.
+    private var scaleX = 1f
+    private var scaleY = 1f
 
+    // Logical dimensions of the keyboard (unscaled)
+    private var logicalWidth = 0f
+    private var logicalHeight = 0f
+
+    // Rendered dimensions of the keyboard (scaled for display)
+    private var renderedWidth = 0f
+    private var renderedHeight = 0f
+
+
+    private var keyboardActionListener: OnKeyboardActionListener? = null
     private var isShiftOn = false
     private var isCtrlOn = false
     private var isAltOn = false
     private var isCapsLockOn = false
+    private var isKeyRepeated = false
+    private var isLongPressHandled = false
+    private var downKeyIndex = -1
+    private var currentKey: Key? = null
+    private var repeatKeyRunnable: Runnable? = null
 
-    private var scaleX = 1f
-    private var scaleY = 1f
+    companion object {
+        private const val TAG = "CustomKeyboardView"
+        private const val MSG_LONGPRESS = 1
+        private const val LONGPRESS_TIMEOUT = 250
+        private const val REPEAT_DELAY = 50
+        private const val REPEAT_START_DELAY = 250
+    }
 
-
+    ///////////////////////////////////
+    // INIT
     init {
         isFocusable = true
         isFocusableInTouchMode = true
+        paint.isAntiAlias = true
+        paint.textAlign = Paint.Align.CENTER
+        paint.alpha = 255
+    }
+
+    fun setKeyboard(keyboard: CustomKeyboard) {
+        this.keyboard = keyboard
+        keys = keyboard.getAllKeys()
+        invalidateAllKeys()
+    }
+
+
+    /////////////////////////////////////
+    // Handle events
+
+    private val handlerCallback = Handler.Callback { msg ->
+        if (msg.what == MSG_LONGPRESS) {
+            val key = msg.obj as? Key
+            if (key != null && !isLongPressHandled) {
+                handleLongPress(key)
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    private val handler = Handler(Looper.getMainLooper(), handlerCallback)
+
+    private fun handleTouchDown(x: Int, y: Int) {
+        val key = keyboard?.getKeyAt(x.toFloat(), y.toFloat()) ?: return
+
+        downKeyIndex = keys?.indexOf(key) ?: -1
+        isLongPressHandled = false
+        isKeyRepeated = false
+
+        // Start repeatable keys only if repeatable
+        if (key.isRepeatable) {
+            startKeyRepeat(key)
+        } else {
+            // Schedule long press for non-repeatable keys
+            scheduleLongPress(key)
+        }
+
+        // Save key reference for later use in handleTouchUp
+        currentKey = key
+    }
+
+    private fun handleTouchUp(x: Int, y: Int) {
+        // Cancel repeat and long press behavior
+        cancelRepeatKey()
+        handler.removeMessages(MSG_LONGPRESS)
+
+        currentKey?.let { key ->
+            when {
+                isLongPressHandled -> {
+                    // Skip short press if long press is already handled
+                }
+                isKeyRepeated -> {
+                    // Skip short press if key repeat is already handled
+                }
+                else -> {
+                    keyboardActionListener?.onKey(key.keyCode, key.label)
+                }
+            }
+        }
+
+
+        // Reset states
+        isLongPressHandled = false
+        isKeyRepeated = false
+        currentKey = null
+    }
+
+    private fun handleLongPress(key: Key) {
+        isLongPressHandled = true
+
+        // Dispatch long press action
+        if (key.keyCodeLongPress != null) {
+            key.keyCodeLongPress.let { keyboardActionListener?.onKey(key.keyCodeLongPress, key.label) }
+
+        } else if (!key.smallLabel.isNullOrEmpty()) {
+            keyboardActionListener?.onText(key.smallLabel)
+        } else {
+        }
+    }
+
+    private fun scheduleLongPress(key: Key) {
+        handler.obtainMessage(MSG_LONGPRESS, key).let {
+            handler.sendMessageDelayed(it, LONGPRESS_TIMEOUT.toLong())
+        }
+    }
+
+    private fun startKeyRepeat(key: Key) {
+        repeatKeyRunnable = object : Runnable {
+            override fun run() {
+                isKeyRepeated = true // Mark repeat triggered
+                keyboardActionListener?.onKey(key.keyCode, key.label)
+                handler.postDelayed(this, REPEAT_DELAY.toLong())
+            }
+        }
+        handler.postDelayed(repeatKeyRunnable!!, REPEAT_START_DELAY.toLong())
+    }
+
+    private fun cancelRepeatKey() {
+        repeatKeyRunnable?.let {
+            handler.removeCallbacks(it)
+        }
+        repeatKeyRunnable = null
     }
 
     override fun onAttachedToWindow() {
@@ -88,30 +196,6 @@ class CustomKeyboardView @JvmOverloads constructor(
 
     override fun dispatchTouchEvent(event: MotionEvent?): Boolean {
         return super.dispatchTouchEvent(event)
-    }
-
-
-
-    fun updateMetaState(shiftOn: Boolean, ctrlOn: Boolean, altOn: Boolean, capsLockOn: Boolean) {
-        isShiftOn = shiftOn
-        isCtrlOn = ctrlOn
-        isAltOn = altOn
-        isCapsLockOn = capsLockOn
-
-        keys?.forEach { key ->
-            if (key.modifier) {
-                // Update meta key labels dynamically based on their state
-                key.label = key.label?.let {
-                    if (isMetaKeyToggled(key.codes)) it.uppercase() else it.lowercase()
-                }
-            } else {
-                // Update non-modifier key labels dynamically
-                key.label = key.label?.let {
-                    if (shiftOn || capsLockOn) it.uppercase() else it.lowercase()
-                }
-            }
-        }
-        invalidateAllKeys()
     }
 
     private fun isMetaKeyToggled(code: Int): Boolean {
@@ -125,117 +209,8 @@ class CustomKeyboardView @JvmOverloads constructor(
     }
 
 
-
-    // Start repeating a key
-    private fun startKeyRepeat(key: Key) {
-        repeatKeyRunnable = object : Runnable {
-            override fun run() {
-                keyboardActionListener?.onKey(key.codes, intArrayOf(key.codes), key.label)
-                handler?.postDelayed(this, repeatDelay)
-            }
-        }
-        handler?.postDelayed(repeatKeyRunnable!!, LONGPRESS_TIMEOUT.toLong())
-    }
-
-    // Schedule a long press
-    private fun scheduleLongPress(key: Key) {
-        handler?.obtainMessage(MSG_LONGPRESS, key.codesLongPress, 0)?.let {
-            handler?.sendMessageDelayed(
-                it,
-                LONGPRESS_TIMEOUT.toLong()
-            )
-        }
-    }
-
-    private fun cancelRepeatKey() {
-        repeatKeyRunnable?.let {
-            handler?.removeCallbacks(it)
-        }
-        repeatKeyRunnable = null
-    }
-
-    companion object {
-        private const val TAG = "CustomKeyboardView"
-        private const val MSG_LONGPRESS = 1
-        private const val LONGPRESS_TIMEOUT = 250
-    }
-
-    init {
-        paint.isAntiAlias = true
-        paint.textAlign = Paint.Align.CENTER
-        paint.alpha = 255
-    }
-
-    fun setKeyboard(keyboard: CustomKeyboard) {
-        this.keyboard = keyboard
-        keys = keyboard.getAllKeys()
-        invalidateAllKeys()
-    }
-
     fun setOnKeyboardActionListener(listener: OnKeyboardActionListener) {
         keyboardActionListener = listener
-    }
-
-
-
-
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        val keyboard = keyboard ?: return
-        val keys = keys ?: return
-
-        val totalWidth = width.toFloat() // View width
-        val totalHeight = height.toFloat() // View height
-        val totalLogicalHeight = keyboard.totalLogicalHeight.toFloat()
-
-        var currentY = 0f
-
-        keyboard.rows.forEach { row ->
-            // Scale row height proportionally
-            val rowHeight = (row.height / totalLogicalHeight) * totalHeight
-            var currentX = 0f
-
-            row.keys.forEach { key ->
-                // Scale key dimensions dynamically
-                val keyWidth = (key.width / 100f) * totalWidth
-                val keyHeight = rowHeight
-
-                val keyX = currentX
-                val keyY = currentY
-
-                // Update logical key positions for touch detection
-                key.x = (keyX / scaleX).toInt()
-                key.y = (keyY / scaleY).toInt()
-                key.width = (keyWidth / scaleX).toInt()
-                key.height = (keyHeight / scaleY).toInt()
-
-                // Draw key background
-                val keyBounds = RectF(keyX, keyY, keyX + keyWidth, keyY + keyHeight)
-                paint.color = if (key.modifier) keyModifierBackgroundColor else keyBackgroundColor
-                canvas.drawRect(keyBounds, paint)
-
-                // Draw key label
-                key.label?.let { label ->
-                    paint.color = keyTextColor
-                    paint.textSize = keyHeight * 0.4f
-                    paint.textAlign = Paint.Align.CENTER
-                    canvas.drawText(label, keyBounds.centerX(), keyBounds.centerY() + (paint.textSize / 3), paint)
-                }
-
-                currentX += keyWidth
-            }
-            currentY += rowHeight
-        }
-    }
-
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        keyboard?.let { keyboard ->
-            scaleX = w.toFloat() / keyboard.totalLogicalWidth.toFloat()
-            scaleY = h.toFloat() / keyboard.totalLogicalHeight.toFloat()
-            Log.d(TAG, "ScaleX: $scaleX, ScaleY: $scaleY")
-        }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -243,119 +218,221 @@ class CustomKeyboardView @JvmOverloads constructor(
         val scaledX = (event.x / scaleX).toInt()
         val scaledY = (event.y / scaleY).toInt()
 
-        Log.d(TAG, "Raw Touch - X: ${event.x}, Y: ${event.y}")
-        Log.d(TAG, "Scaled Touch - X: $scaledX, Y: $scaledY")
-
         when (action) {
             MotionEvent.ACTION_DOWN -> {
                 handleTouchDown(scaledX, scaledY)
                 performClick()
             }
+
             MotionEvent.ACTION_MOVE -> handleTouchMove(scaledX, scaledY)
             MotionEvent.ACTION_UP -> handleTouchUp(scaledX, scaledY)
         }
         return true
     }
 
+    private fun handleTouchMove(x: Int, y: Int) {
+        // Optional: Cancel repeat/long press if the finger moves off the key
+        if (keyboard?.getKeyAt(x.toFloat(), y.toFloat()) == null) {
+            cancelRepeatKey()
+            handler.removeMessages(MSG_LONGPRESS)
+        }
+    }
+
+    fun isLongPressing(): Boolean {
+        return isLongPressHandled
+    }
 
 
 
+
+    /////////////////////////////////////
+    // RENDERED VIEW SCALING LOGIC
+    // Helper to calculate keyboard height dynamically in pixels
+    private fun calculateKeyboardHeight(context: Context): Float {
+        val keyboard = keyboard ?: return 0f
+        var totalHeight = 0f
+
+        keyboard.rows.forEach { row ->
+            val rowHeight = row.rowHeight ?: keyboard.defaultKeyHeight
+            totalHeight += rowHeight.toPx(context)
+        }
+
+        return totalHeight
+    }
+
+    private fun Float.toPx(context: Context): Float {
+        return TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP, this, context.resources.displayMetrics
+        )
+    }
+
+
+
+    /////////////////////////////////////
+    // MEASURE VIEW DIMENSIONS
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        // Calculate the desired keyboard height in pixels
         val desiredHeight = calculateKeyboardHeight(context)
 
-        // Measure the width
-        val widthMode = MeasureSpec.getMode(widthMeasureSpec)
-        val widthSize = MeasureSpec.getSize(widthMeasureSpec)
-        val measuredWidth = if (widthMode == MeasureSpec.EXACTLY) {
-            widthSize
-        } else {
-            suggestedMinimumWidth
+        // Measure width
+        val measuredWidth = when (MeasureSpec.getMode(widthMeasureSpec)) {
+            MeasureSpec.EXACTLY -> MeasureSpec.getSize(widthMeasureSpec)
+            else -> suggestedMinimumWidth
         }
 
-        // Measure the height
-        val heightMode = MeasureSpec.getMode(heightMeasureSpec)
-        val heightSize = MeasureSpec.getSize(heightMeasureSpec)
-        val measuredHeight = if (heightMode == MeasureSpec.EXACTLY) {
-            heightSize
-        } else {
-            desiredHeight.coerceAtMost(heightSize) // Use content height
+        // Measure height
+        val measuredHeight = when (MeasureSpec.getMode(heightMeasureSpec)) {
+            MeasureSpec.EXACTLY -> MeasureSpec.getSize(heightMeasureSpec).toFloat()
+            else -> minOf(desiredHeight, MeasureSpec.getSize(heightMeasureSpec).toFloat())
         }
 
-        // Apply the measured dimensions
-        setMeasuredDimension(measuredWidth, measuredHeight)
-    }
+        // Store rendered dimensions
+        renderedWidth = measuredWidth.toFloat()
+        renderedHeight = measuredHeight
 
-    // Helper to calculate keyboard height dynamically
-    fun calculateKeyboardHeight(context: Context): Int {
-        val keyboard = keyboard ?: return 0
-        return keyboard.rows.sumOf { row -> row.height.toPx(context) }
-    }
-
-    // Convert dp to pixels
-    private fun Int.toPx(context: Context): Int {
-        return TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, this.toFloat(), context.resources.displayMetrics
-        ).toInt()
+        // Set the measured dimensions
+        setMeasuredDimension(measuredWidth, measuredHeight.toInt())
     }
 
 
+    /////////////////////////////////////
+    // ON SIZE CHANGE: CALCULATE SCALES
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        keyboard?.let { kb ->
+            // Cache logical dimensions
+            logicalWidth = kb.totalLogicalWidth.toFloat()
+            logicalHeight = kb.totalLogicalHeight.toFloat()
 
-    private fun drawKey(canvas: Canvas, key: Key) {
-        // Total keyboard dimensions
-        val totalWidth = width
-        val totalHeight = height
+            // Compute scaling factors
+            scaleX = if (logicalWidth > 0) w / logicalWidth else 1f
+            scaleY = if (logicalHeight > 0) h / logicalHeight else 1f
 
-        // Calculate actual dimensions
-        val keyWidth = (key.width / 100f) * totalWidth
-        val keyHeight = (key.height / 100f) * totalHeight
-        val keyX = (key.x / 100f) * totalWidth
-        val keyY = (key.y / 100f) * totalHeight
+        }
+    }
 
-        val keyBounds = Rect(keyX.toInt(), keyY.toInt(), (keyX + keyWidth).toInt(), (keyY + keyHeight).toInt())
 
-        // Draw background
-        paint.color = if (key.modifier) keyModifierBackgroundColor else keyBackgroundColor
-        canvas.drawRect(keyBounds, paint)
+    ///////////////////////////////////////
+    // DRAWING LOGIC
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val keyboard = keyboard ?: return
+        val keys = keys ?: return
 
-        // Draw icon if present
-        key.icon?.let { iconName ->
-            val drawable = getIconDrawable(iconName)
-            drawable?.let {
-                val iconSize = (keyHeight * 0.6).toInt()
-                val iconLeft = keyX.toInt() + ((keyWidth - iconSize) / 2).toInt()
-                val iconTop = keyY.toInt() + ((keyHeight - iconSize) / 2).toInt()
-                it.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize)
-                it.draw(canvas)
-                return
+        val totalWidth = width.toFloat() // Screen width
+        val scaleX = totalWidth / keyboard.totalLogicalWidth
+        val scaleY = height.toFloat() / keyboard.totalLogicalHeight
+
+        var currentY = 0f
+
+        keyboard.rows.forEach { row ->
+            val rowHeight = row.rowHeight?.times(scaleY) ?: (Constants.DEFAULT_KEY_HEIGHT * scaleY)
+            val defaultKeyWidth = row.defaultKeyWidth?.times(scaleX) ?: (Constants.DEFAULT_KEY_WIDTH * scaleX)
+            var currentX = 0f
+
+            row.keys.forEach { key ->
+                // Resolve key-specific height, fallback to row height
+                val keyHeight = key.keyHeight?.times(scaleY) ?: rowHeight
+
+                // Resolve key-specific width, fallback to row default
+                val keyWidth = key.keyWidth?.times(scaleX) ?: defaultKeyWidth
+
+                // Key position
+                val keyX = currentX
+                val keyY = currentY // Align with row baseline; do not adjust upwards
+
+                // Key bounds for drawing
+                val keyBounds = RectF(keyX, keyY, keyX + keyWidth, keyY + keyHeight)
+
+                // Draw the key background
+                paint.color = if (key.isModifier) keyModifierBackgroundColor else keyBackgroundColor
+                canvas.drawRect(keyBounds, paint)
+
+                // --- Draw key background ---
+                paint.color = if (key.isModifier) keyModifierBackgroundColor else keyBackgroundColor
+                canvas.drawRect(keyBounds, paint)
+
+                // --- Draw icon if present ---
+                key.icon?.let { iconName ->
+                    val drawable = getIconDrawable(iconName)
+                    drawable?.let {
+                        val iconSize = (keyHeight * 0.6f).toInt()
+                        val iconLeft = keyX.toInt() + ((keyWidth - iconSize) / 2).toInt()
+                        val iconTop = keyY.toInt() + ((keyHeight - iconSize) / 2).toInt()
+                        it.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize)
+                        it.draw(canvas)
+                    }
+                } ?: run {
+                    // Check if small label exists
+                    if (key.smallLabel != null) {
+                        // --- Draw small label (secondary text) ---
+                        key.smallLabel?.let { smallLabel ->
+                            paint.color = keySmallTextColor
+                            paint.textSize = keyHeight * 0.3f
+                            paint.textAlign = Paint.Align.CENTER
+                            canvas.drawText(
+                                smallLabel,
+                                keyBounds.centerX(),
+                                keyBounds.top + keyHeight * 0.35f, // Upper half position
+                                paint
+                            )
+                        }
+
+                        // --- Draw primary label (main text) ---
+                        key.label?.let { label ->
+                            paint.color = keyTextColor
+                            paint.textSize = keyHeight * 0.35f
+                            paint.textAlign = Paint.Align.CENTER
+                            canvas.drawText(
+                                label,
+                                keyBounds.centerX(),
+                                keyBounds.centerY() + keyHeight * 0.3f, // Slightly lower in the middle half
+                                paint
+                            )
+                        }
+                    } else {
+                        // --- Draw primary label only (centered) ---
+                        key.label?.let { label ->
+                            paint.color = keyTextColor
+                            paint.textSize = keyHeight * 0.4f
+                            paint.textAlign = Paint.Align.CENTER
+
+                            // Transform the label dynamically based on meta states
+                            val renderedLabel = if (key.isModifier && isMetaKeyToggled(key.keyCode)) {
+                                label.uppercase()
+                            } else if (!key.isModifier && (isShiftOn || isCapsLockOn)) {
+                                label.uppercase()
+                            } else {
+                                label.lowercase()
+                            }
+
+                            canvas.drawText(
+                                renderedLabel,
+                                keyBounds.centerX(),
+                                keyBounds.centerY() + (paint.textSize / 3), // Centered vertically
+                                paint
+                            )
+                        }
+                    }
+                }
+
+
+                // Increment X for next key
+                currentX += keyWidth + (key.keyGap?.times(scaleX) ?: 0f)
             }
-        }
 
-        // Draw small label
-        key.labelSmall?.let { smallLabel ->
-            paint.color = keySmallTextColor
-            paint.textSize = keyHeight * 0.2f
-            canvas.drawText(
-                smallLabel,
-                keyX + keyWidth / 2f,
-                keyY + keyHeight * 0.3f,
-                paint.apply { textAlign = Paint.Align.CENTER }
-            )
-        }
-
-        // Draw primary label
-        key.label?.let { label ->
-            paint.color = keyTextColor
-            paint.textSize = keyHeight * 0.4f
-            canvas.drawText(
-                label,
-                keyX + keyWidth / 2f,
-                keyY + keyHeight * 0.65f,
-                paint.apply { textAlign = Paint.Align.CENTER }
-            )
+            // Increment Y for the next row
+            currentY += rowHeight + (row.rowGap?.times(scaleY) ?: 0f)
         }
     }
 
-
+    fun updateMetaState(shiftOn: Boolean, ctrlOn: Boolean, altOn: Boolean, capsLockOn: Boolean) {
+        isShiftOn = shiftOn
+        isCtrlOn = ctrlOn
+        isAltOn = altOn
+        isCapsLockOn = capsLockOn
+        invalidateAllKeys()
+    }
 
     // Helper function to fetch drawable icons
     private fun getIconDrawable(iconName: String): Drawable? {
@@ -365,62 +442,11 @@ class CustomKeyboardView @JvmOverloads constructor(
         }
     }
 
-
-    private fun handleTouchDown(x: Int, y: Int) {
-        Log.d("CustomKeyboardView", "handleTouchDown - Scaled Touch X: $x, Y: $y")
-
-        val key = keyboard?.getKeyAt(x, y) ?: return
-        Log.d("CustomKeyboardView", "Key Pressed: ${key.label}, Bounds: X=${key.x}, Y=${key.y}, Width=${key.width}, Height=${key.height}")
-
-        downKeyIndex = keys?.indexOf(key) ?: -1
-        isLongPressHandled = false
-
-        // Trigger the key press immediately
-        keyboardActionListener?.onKey(key.codes, intArrayOf(key.codes), key.label)
-
-        // Handle repeatable and long press behavior
-        when {
-            key.repeatable -> startKeyRepeat(key)
-            else -> scheduleLongPress(key)
-        }
-    }
-
-
-
-
-    private fun handleTouchMove(x: Int, y: Int) {
-        // Optional: Cancel repeat/long press if the finger moves off the key
-        if (keyboard?.getKeyAt(x, y) == null) {
-            cancelRepeatKey()
-            handler?.removeMessages(MSG_LONGPRESS)
-        }
-    }
-
-    fun isLongPressing(): Boolean {
-        return isLongPressHandled
-    }
-
-
-    private fun handleTouchUp(x: Int, y: Int) {
-        Log.d("CustomKeyboardView", "handleTouchUp - X: $x, Y: $y")
-
-        // Cancel repeat and long press behavior
-        cancelRepeatKey()
-        handler.removeMessages(MSG_LONGPRESS)
-
-        val key = keyboard?.getKeyAt(x, y)
-        if (key != null && !isLongPressHandled) {
-            // Handle a regular key tap if long press was not triggered
-            Log.d("CustomKeyboardView", "Key Released: ${key.label}")
-            keyboardActionListener?.onRelease(key.codes)
-        }
-    }
-
-
     fun invalidateAllKeys() {
         buffer = null
-        invalidate()
+        invalidate() // Forces the entire view to be redrawn
     }
+
 }
 
 

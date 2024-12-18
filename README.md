@@ -1,10 +1,11 @@
 # New7rowKB
 ![layout](doc/img_main.png)
 
-- Privacy-friendly (no data collection, no taps indication).
-- Coding-oriented (all the symbols and necessary keys up front).
+- Privacy-friendly (no data collection, no taps indication, no key logging).
+- Coding-oriented (all the symbols and necessary keys up front in default layout).
 - Uses `sendKeyEvent()` to simulate physical keyboard as close as possible.
 - Suitable for any screen, has floating mode (like Gboard).
+- Keyboard layouts are described in .json format, with user-friendly attributes.
 
 ## Screenshots
 ![floating mode portrait](doc/screen_floating.png)
@@ -12,13 +13,10 @@
 
 ## TODO
 - Implement simple layout scrolling.
-- Display layout name on the space button (?).
+- Display layout name on the space button (or dedicated?).
 - Enable floating keyboard from persistent notification.
-- Enable preferences storage and save KB parameters.
-- Enable color picker and font scaling in the app.
-- Enable .xml uploading from the storage.
+- Store all possible options in keyboard .json files.
+- Remove all logging (this is a reminder).
 
 ## Not working:
-- Google chat (have to switch to gboard to type anything, since it is 
-accepting things via `currentInputConnection.commitText(finalKeyLabel, 1)`
-and cursor operations are different.
+- So far so good?

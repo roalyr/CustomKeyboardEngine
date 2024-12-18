@@ -1,69 +1,65 @@
 {
-  "defaultWidth": 10,
-  "defaultHeight": 10,
-  "horizontalGap": 1,
-  "verticalGap": 1,
+  "defaultKeyWidth": 10,
+  "defaultKeyHeight": 50,
+  "defaultRowGap": 0.5,
+  "defaultKeyGap": 0.1,
   "rows": [
     {
-      "height": 50,
-      "rowEdgeFlags": "top",
+      "rowHeight": 40,
+      "defaultKeyWidth": 8.3,
       "keys": [
         {
           "label": "Esc",
-          "codes": 111,
-          "modifier": true,
-          "edgeFlags": "left"
+          "keyCode": 111,
+          "isModifier": true
         },
-        { "label": "1", "labelSmall": "!" },
-        { "label": "2", "labelSmall": "@" },
-        { "label": "3", "labelSmall": "#" },
-        { "label": "4", "labelSmall": "$" },
-        { "label": "5", "labelSmall": "%" },
-        { "label": "6", "labelSmall": "^" },
-        { "label": "7", "labelSmall": "&" },
-        { "label": "8", "labelSmall": "*" },
-        { "label": "9", "labelSmall": "(" },
-        { "label": "0", "labelSmall": ")" },
+        { "label": "1", "smallLabel": "!" },
+        { "label": "2", "smallLabel": "@" },
+        { "label": "3", "smallLabel": "#" },
+        { "label": "4", "smallLabel": "$" },
+        { "label": "5", "smallLabel": "%" },
+        { "label": "6", "smallLabel": "^" },
+        { "label": "7", "smallLabel": "&" },
+        { "label": "8", "smallLabel": "*" },
+        { "label": "9", "smallLabel": "(" },
+        { "label": "0", "smallLabel": ")" },
         {
           "label": "Del",
-          "codes": 112,
-          "modifier": true,
-          "repeatable": true,
-          "edgeFlags": "right"
+          "keyCode": 112,
+          "isModifier": true,
+          "isRepeatable": true
         }
       ]
     },
     {
-      "height": 50,
+      "rowHeight": 40,
       "keys": [
         {
           "label": "Tab",
-          "codes": 61,
-          "edgeFlags": "left",
-          "modifier": true,
-          "width": 15
+          "keyCode": 61,
+          "isModifier": true,
+          "keyWidth": 15
         },
-        { "label": "`", "labelSmall": "~" },
-        { "label": "[", "labelSmall": "{" },
-        { "label": "]", "labelSmall": "}" },
-        { "label": "'", "labelSmall": "\"" },
-        { "label": "\\", "labelSmall": "|" },
-        { "label": "-", "labelSmall": "_" },
-        { "label": "=", "labelSmall": "+" },
+        { "label": "`", "smallLabel": "~" },
+        { "label": "[", "smallLabel": "{" },
+        { "label": "]", "smallLabel": "}" },
+        { "label": "'", "smallLabel": "\"" },
+        { "label": "\\", "smallLabel": "|" },
+        { "label": "-", "smallLabel": "_" },
+        { "label": "=", "smallLabel": "+" },
         {
           "icon": "@drawable/ic_clear_vector",
-          "codes": 67,
-          "edgeFlags": "right",
-          "modifier": true,
-          "repeatable": true,
-          "width": 15
+          "keyCode": 67,
+          "isModifier": true,
+          "isRepeatable": true,
+          "keyWidth": 15
         }
       ]
     },
     {
-      "height": 50,
+      "rowHeight": 50,
       "keys": [
-        { "label": "q", "edgeFlags": "left" },
+        { "label": "q" },
         { "label": "w" },
         { "label": "e" },
         { "label": "r" },
@@ -72,13 +68,13 @@
         { "label": "u" },
         { "label": "i" },
         { "label": "o" },
-        { "label": "p", "edgeFlags": "right" }
+        { "label": "p" }
       ]
     },
     {
-      "height": 50,
+      "rowHeight": 50,
       "keys": [
-        { "label": "a", "edgeFlags": "left" },
+        { "label": "a" },
         { "label": "s" },
         { "label": "d" },
         { "label": "f" },
@@ -87,136 +83,124 @@
         { "label": "j" },
         { "label": "k" },
         { "label": "l" },
-        { "label": ";", "labelSmall": ":", "edgeFlags": "right" }
+        { "label": ";", "smallLabel": ":" }
       ]
     },
     {
-      "height": 50,
+      "rowHeight": 50,
       "keys": [
-        { "label": "z", "edgeFlags": "left" },
+        { "label": "z" },
         { "label": "x" },
         { "label": "c" },
         { "label": "v" },
         { "label": "b" },
         { "label": "n" },
         { "label": "m" },
-        { "label": ",", "labelSmall": "<" },
-        { "label": ".", "labelSmall": ">" },
-        { "label": "/", "labelSmall": "?", "edgeFlags": "right" }
+        { "label": ",", "smallLabel": "<" },
+        { "label": ".", "smallLabel": ">" },
+        { "label": "/", "smallLabel": "?" }
       ]
     },
     {
-      "height": 50,
+      "rowHeight": 40,
       "keys": [
         {
           "label": "shf",
-          "codes": 59,
-          "sticky": true,
-          "width": 12,
-          "modifier": true,
-          "edgeFlags": "left"
+          "keyCode": 59,
+          "isSticky": true,
+          "keyWidth": 12,
+          "isModifier": true
         },
         {
           "label": "ctl",
-          "codes": 113,
-          "sticky": true,
-          "width": 12,
-          "modifier": true
+          "keyCode": 113,
+          "isSticky": true,
+          "keyWidth": 12,
+          "isModifier": true
         },
         {
           "label": "alt",
-          "codes": 57,
-          "sticky": true,
-          "width": 12,
-          "modifier": true
+          "keyCode": 57,
+          "isSticky": true,
+          "keyWidth": 12,
+          "isModifier": true
         },
         {
           "label": " ",
-          "codes": 62,
-          "width": 28,
-          "repeatable": true,
-          "compound": true,
-          "rowEdgeFlags": "top"
+          "keyCode": 62,
+          "keyWidth": 29,
+          "keyHeight": 80,
+          "isRepeatable": true
         },
         {
           "label": "edt",
-          "labelSmall": "emj",
-          "width": 12,
-          "codes": -1,
-          "codesLongPress": -1,
-          "modifier": true
+          "smallLabel": "emj",
+          "keyCode": -1,
+          "keyCodeLongPress": -1,
+          "keyWidth": 12,
+          "isModifier": true
         },
         {
           "label": "▲",
-          "width": 12,
-          "codes": 19,
-          "modifier": true,
-          "repeatable": true
+          "keyWidth": 12,
+          "keyCode": 19,
+          "isModifier": true,
+          "isRepeatable": true
         },
         {
           "label": "Ent",
-          "codes": 66,
-          "width": 12,
-          "modifier": true,
-          "edgeFlags": "right"
+          "keyCode": 66,
+          "keyWidth": 12,
+          "isModifier": true
         }
       ]
     },
     {
-      "height": 50,
-      "rowEdgeFlags": "bottom",
+      "rowHeight": 40,
       "keys": [
         {
           "label": "flt",
-          "codes": -12,
-          "width": 12,
-          "modifier": true,
+          "keyCode": -12,
+          "keyWidth": 12,
+          "isModifier": true,
           "edgeFlags": "left"
         },
         {
           "label": "cap",
-          "codes": 115,
-          "sticky": true,
-          "width": 12,
-          "modifier": true
+          "keyCode": 115,
+          "isSticky": true,
+          "keyWidth": 12,
+          "isModifier": true
         },
         {
           "label": "lyt",
-          "labelSmall": "num",
-          "width": 12,
-          "codes": -1,
-          "codesLongPress": -1,
-          "modifier": true
-        },
-        {
-          "label": " ",
-          "codes": 62,
-          "width": 28,
-          "repeatable": true,
-          "compound": true,
-          "rowEdgeFlags": "bottom"
+          "smallLabel": "num",
+          "keyCode": -1,
+          "keyCodeLongPress": -1,
+          "keyWidth": 12,
+          "isModifier": true,
+          "keyGap": 29.3
         },
         {
           "label": "◀",
-          "width": 12,
-          "codes": 21,
-          "modifier": true,
-          "repeatable": true
+          "keyWidth": 12,
+          "keyCode": 21,
+          "isModifier": true,
+          "isRepeatable": true
         },
         {
           "label": "▼",
-          "width": 12,
-          "codes": 20,
-          "modifier": true,
-          "repeatable": true
+          "keyWidth": 12,
+          "keyCode": 20,
+          "isModifier": true,
+          "isRepeatable": true
         },
         {
           "label": "▶",
-          "width": 12,
-          "codes": 22,
-          "modifier": true,
-          "edgeFlags": "right",
-          "repeatable": true
+          "keyWidth": 12,
+          "keyCode": 22,
+          "isModifier": true,
+          "isRepeatable": true
         }
       ]
     }

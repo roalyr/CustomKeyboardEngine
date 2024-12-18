@@ -143,16 +143,6 @@ class CustomKeyboardService : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        Log.d(TAG, "onStartInputView called, restarting: $restarting")
-        Log.d(TAG, "inputView: $inputView")
-        Log.d(TAG, "keyboardView: $keyboardView")
-        Log.d(TAG, "placeholderView: $serviceKeyboardView")
-        Log.d(TAG, "floatingKeyboardView: $floatingKeyboardView")
-    }
-
-    override fun onFinishInputView(finishingInput: Boolean) {
-        super.onFinishInputView(finishingInput)
-        Log.d(TAG, "onFinishInputView called, finishingInput: $finishingInput")
     }
 
 
@@ -230,27 +220,11 @@ class CustomKeyboardService : InputMethodService() {
             keyboardView = rootView.findViewById(R.id.keyboard_view) as? CustomKeyboardView
 
             keyboardView?.let { view ->
-                Log.d(TAG, "Keyboard view initialized successfully.")
-
                 // Load the keyboard layout from JSON
                 val customKeyboard = loadKeyboardFromJson(R.raw.keyboard_default)
-
                 if (customKeyboard != null) {
-                    Log.d(TAG, "Keyboard layout loaded successfully: ${customKeyboard.rows.size} rows")
-
-                    // Debug: Log details of the keyboard layout
-                    customKeyboard.rows.forEachIndexed { rowIndex, row ->
-                        row.keys.forEachIndexed { keyIndex, key ->
-                            Log.d(TAG, "Row $rowIndex, Key $keyIndex: label=${key.label}, x=${key.x}, y=${key.y}, width=${key.width}, height=${key.height}")
-                        }
-                    }
-
                     view.setKeyboard(customKeyboard)
-
-                    // Set keyboard action listener
                     setKeyboardActionListener(view)
-                    Log.d(TAG, "Keyboard action listener set.")
-
                     return rootView
                 } else {
                     Log.e(TAG, "Failed to load standard keyboard layout")
@@ -334,7 +308,6 @@ class CustomKeyboardService : InputMethodService() {
 
             // Decode JSON into KeyboardLayout
             val keyboardLayout = json.decodeFromString<KeyboardLayout>(jsonContent)
-            Log.d(TAG, "Successfully loaded KeyboardLayout: ${keyboardLayout.rows.size} rows")
 
             // Return a CustomKeyboard instance
             CustomKeyboard(this, keyboardLayout)
@@ -442,30 +415,34 @@ class CustomKeyboardService : InputMethodService() {
             private var metaState = 0 // Combined meta state
             private var modifiedMetaState = 0 // Modified meta state for handling caps lock
 
-            override fun onKey(primaryCode: Int, keyCodes: IntArray, label: CharSequence?) {
+            override fun onKey(primaryCode: Int, label: CharSequence?) {
                 if (keyboardView.isLongPressing()) {
-                    Log.d(TAG, "Long press detected, suppressing key handling")
+                    //Long press detected, suppressing key handling
                     return
                 }
 
                 // Handle custom keycodes. If key codes do not match - it will be skipped.
-                handleCustomKey(primaryCode, keyCodes, label)
+                handleCustomKey(primaryCode, label)
 
                 when (primaryCode) {
                     KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> {
                         metaState = toggleMetaState(metaState, KeyEvent.META_SHIFT_ON)
                         isShiftPressed = !isShiftPressed
+                        keyboardView.updateMetaState(isShiftPressed, isCtrlPressed, isAltPressed, isCapsPressed)
                     }
                     KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT -> {
                         metaState = toggleMetaState(metaState, KeyEvent.META_CTRL_ON)
                         isCtrlPressed = !isCtrlPressed
+                        keyboardView.updateMetaState(isShiftPressed, isCtrlPressed, isAltPressed, isCapsPressed)
                     }
                     KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT -> {
                         metaState = toggleMetaState(metaState, KeyEvent.META_ALT_ON)
                         isAltPressed = !isAltPressed
+                        keyboardView.updateMetaState(isShiftPressed, isCtrlPressed, isAltPressed, isCapsPressed)
                     }
                     KeyEvent.KEYCODE_CAPS_LOCK -> {
                         isCapsPressed = !isCapsPressed
+                        keyboardView.updateMetaState(isShiftPressed, isCtrlPressed, isAltPressed, isCapsPressed)
                     }
                     else -> {
                         modifiedMetaState = if (isCapsPressed) {
@@ -473,9 +450,7 @@ class CustomKeyboardService : InputMethodService() {
                         } else {
                             metaState
                         }
-                        // Update all meta states in the view
-                        keyboardView.updateMetaState(isShiftPressed, isCtrlPressed, isAltPressed, isCapsPressed)
-                        handleKey(primaryCode, keyCodes, label, modifiedMetaState)
+                        handleKey(primaryCode, label, modifiedMetaState)
                         resetMetaStates()
                     }
                 }
@@ -486,7 +461,6 @@ class CustomKeyboardService : InputMethodService() {
             }
 
             override fun onRelease(codes: Int) {
-                Log.d("CustomKeyboardService", "Key Released: Code=$codes")
             }
 
             private fun toggleMetaState(metaState: Int, metaFlag: Int): Int {
@@ -510,7 +484,7 @@ class CustomKeyboardService : InputMethodService() {
 
     ////////////////////////////////////////////
     // Handle key events
-    private fun handleKey(primaryCode: Int, keyCodes: IntArray?, label: CharSequence?,modifiedMetaState: Int) {
+    private fun handleKey(primaryCode: Int, label: CharSequence?,modifiedMetaState: Int) {
 
         // Manually apply metaState to the key event if key code is written in layout.
         if (primaryCode != Constants.NOT_A_KEY) {
@@ -534,13 +508,11 @@ class CustomKeyboardService : InputMethodService() {
                 }
             } else {
                 // Handle cases where label is null (e.g., keys with icons)
-                // You might want to log a message or perform other actions here
-                Log.d(TAG, "Key with null label pressed (primaryCode: $primaryCode)")
             }
         }
     }
 
-    private fun handleCustomKey(primaryCode: Int, keyCodes: IntArray?, label: CharSequence?)  {
+    private fun handleCustomKey(primaryCode: Int, label: CharSequence?)  {
         // Handle custom key codes related to this application.
         if (primaryCode != Constants.NOT_A_KEY) {
             when (primaryCode) {
@@ -608,7 +580,7 @@ class CustomKeyboardService : InputMethodService() {
     private fun injectKeyEventInternal(action: Int, keyCode: Int, metaState: Int) {
         val eventTime = System.currentTimeMillis()
         val event = KeyEvent(eventTime, eventTime, action, keyCode, 0, metaState)
-        currentInputConnection?.sendKeyEvent(event) ?: Log.w(TAG, "CurrentInputConnection is null. Failed to send key event: $keyCode")
+        currentInputConnection?.sendKeyEvent(event)
     }
 
 

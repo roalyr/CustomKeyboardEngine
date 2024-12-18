@@ -8,71 +8,126 @@ import java.io.File
 @Serializable
 data class KeyboardLayout(
     val rows: List<Row>,
-    val defaultWidth: Int = 50,
-    val defaultHeight: Int = 50,
-    val horizontalGap: Int = 5,
-    val verticalGap: Int = 5,
+    val defaultKeyHeight: Float = Constants.DEFAULT_KEY_HEIGHT,     // Absolute value in DP
+    val defaultKeyWidth: Float = Constants.DEFAULT_KEY_WIDTH,      // Percentage of row width
+    val defaultRowGap: Float = Constants.DEFAULT_ROW_GAP,         // Absolute value in DP (space between rows)
+    val defaultKeyGap: Float = Constants.DEFAULT_KEY_GAP          // Absolute value in DP (space between keys)
 )
 
 @Serializable
 data class Row(
     val keys: List<Key>,
-    var height: Int = 40, //TODO: read from json
+    val rowHeight: Float? = null,         // Row-specific height, fallback to KeyboardLayout.defaultKeyHeight
+    val rowGap: Float? = null,            // Space below this row, fallback to KeyboardLayout.defaultRowGap
+    val defaultKeyWidth: Float? = null,   // Default width for keys in this row, fallback to KeyboardLayout.defaultKeyWidth
+    val defaultKeyGap: Float? = null      // Default gap for keys in this row, fallback to KeyboardLayout.defaultKeyGap
 )
 
 @Serializable
 data class Key(
-    var codes: Int = -1,
-    var codesLongPress: Int = -1,
-    var repeatable: Boolean = false,
-    var modifier: Boolean = false,
+    val keyCode: Int = Constants.NOT_A_KEY,
+    val keyCodeLongPress: Int? = null,
+    val isRepeatable: Boolean = false,
+    val isModifier: Boolean = false,
+    val isSticky: Boolean = false,
     var label: String? = null,
-    var labelSmall: String? = null,
-    var icon: String? = null,
-    var width: Int = 8,     // Default percentage width
-    var height: Int = 10,    // Default percentage height
-    var gap: Int = 0,        // Default percentage gap
-    var x: Int = 0,          // Percentage-based x position
-    var y: Int = 0           // Percentage-based y position
+    val smallLabel: String? = null,
+    val icon: String? = null,
+    var keyWidth: Float? = null,          // Width percentage, fallback to Row.defaultKeyWidth or Layout.defaultKeyWidth
+    var keyHeight: Float? = null,         // Absolute DP value, fallback to Row.rowHeight or Layout.defaultKeyHeight
+    var keyGap: Float? = null,            // Gap percentage, fallback to Row.defaultKeyGap or Layout.defaultKeyGap
+    var x: Float = 0f,                     // Logical X position (calculated)
+    var y: Float = 0f                      // Logical Y position (calculated)
 )
 
-class CustomKeyboard(private val context: Context, layout: KeyboardLayout) {
-    val width: Int
-        get() = rows.maxOfOrNull { row -> row.keys.sumOf { it.width + it.gap } } ?: 0
+class CustomKeyboard(
+    private val context: Context,
+    private val layout: KeyboardLayout // Declare as a class property with `val`
+) {
+    val rows: List<Row> = buildRows(layout)
+    val defaultKeyHeight: Float = layout.defaultKeyHeight ?: Constants.DEFAULT_KEY_HEIGHT
 
-    val height: Int
-        get() = rows.sumOf { it.height }
+    // Total logical width of the keyboard
+    val totalLogicalWidth: Float
+        get() {
+            var maxWidth = 0f
+            for (row in rows) {
+                var rowWidth = 0f
+                for (key in row.keys) {
+                    rowWidth += key.keyWidth ?: layout.defaultKeyWidth
+                }
+                if (rowWidth > maxWidth) {
+                    maxWidth = rowWidth
+                }
+            }
+            return maxWidth
+        }
 
-    val totalLogicalWidth: Int
-        get() = rows.maxOfOrNull { row -> row.keys.sumOf { it.width + it.gap } } ?: 0
+    // Total logical height of the keyboard
+    val totalLogicalHeight: Float
+        get() {
+            var totalHeight = 0f
+            for (row in rows) {
+                val rowHeight = row.rowHeight ?: layout.defaultKeyHeight
+                val rowGap = row.rowGap ?: layout.defaultRowGap
+                totalHeight += rowHeight + rowGap
+            }
+            return totalHeight
+        }
 
-    val totalLogicalHeight: Int
-        get() = rows.sumOf { it.height }
 
-    val rows: List<Row> = buildRows(layout.rows)
-    private fun buildRows(rowDataList: List<Row>): List<Row> {
-        var currentY = 0 // Tracks the Y-coordinate of each row
-        return rowDataList.map { row ->
-            var currentX = 0 // Tracks the X-coordinate for keys in the row
+    private fun buildRows(layout: KeyboardLayout): List<Row> {
+        var currentY = 0f
 
-            // Update each key's position within the row
-            val updatedKeys = row.keys.map { key ->
+        return layout.rows.map { row ->
+            val rowHeight = row.rowHeight ?: layout.defaultKeyHeight
+            val rowGap = row.rowGap ?: layout.defaultRowGap
+            val defaultWidth = row.defaultKeyWidth ?: layout.defaultKeyWidth
+            val defaultGap = row.defaultKeyGap ?: layout.defaultKeyGap
+
+            var currentX = 0f
+            val keys = row.keys.map { key ->
                 key.apply {
+                    keyWidth = keyWidth ?: defaultWidth
+                    keyHeight = keyHeight ?: rowHeight
+                    keyGap = keyGap ?: defaultGap
+
                     x = currentX
                     y = currentY
                 }
-                currentX += key.width + key.gap // Advance X position by key width and gap
+                currentX += key.keyWidth!! + key.keyGap!!
                 key
             }
-
-            currentY += row.height // Move to the next row by adding the row height
-            Row(updatedKeys)
+            currentY += rowHeight + rowGap
+            Row(keys, rowHeight, rowGap, defaultWidth, defaultGap)
         }
+    }
+
+
+    // Retrieve all keys
+    fun getAllKeys(): List<Key> = rows.flatMap { it.keys }
+
+    // Retrieve key at logical coordinates
+    fun getKeyAt(x: Float, y: Float): Key? {
+        return rows.flatMap { it.keys }.firstOrNull { key ->
+            x >= key.x && x < (key.x + (key.keyWidth ?: 0f)) &&
+                    y >= key.y && y < (key.y + (key.keyHeight ?: 0f))
+        }
+    }
+
+
+    // Fetch key by its code
+    fun getKeyByCode(code: Int): Key? {
+        rows.forEach { row ->
+            row.keys.find { it.keyCode == code || it.keyCodeLongPress == code }?.let { return it }
+        }
+        return null
     }
 
     companion object {
         fun fromJson(context: Context, json: String): CustomKeyboard {
-            val layout = Json.decodeFromString<KeyboardLayout>(json)
+            val layout = Json { coerceInputValues = true }
+                .decodeFromString<KeyboardLayout>(json)
             return CustomKeyboard(context, layout)
         }
 
@@ -81,23 +136,5 @@ class CustomKeyboard(private val context: Context, layout: KeyboardLayout) {
                 file.readText().let { fromJson(context, it) }
             } else null
         }
-    }
-
-    fun getKeyAt(x: Int, y: Int): Key? {
-        return getAllKeys().firstOrNull { key ->
-            x >= key.x && x < key.x + key.width &&
-                    y >= key.y && y < key.y + key.height
-        }
-    }
-
-    fun getAllKeys(): List<Key> {
-        return rows.flatMap { it.keys }
-    }
-
-    fun getKeyByCode(code: Int): Key? {
-        rows.forEach { row ->
-            row.keys.find { it.codes == code || it.codesLongPress == code }?.let { return it }
-        }
-        return null
     }
 }

@@ -13,11 +13,14 @@ import android.os.Build
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
+import android.view.Gravity
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
+import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import kotlinx.serialization.json.Json
@@ -33,6 +36,18 @@ class CustomKeyboardService : InputMethodService() {
     private var serviceKeyboardView: CustomKeyboardView? = null
     private var inputView: View? = null
 
+    // Tracks the last modification time of the layout directories
+    private var lastLanguageLayoutModified: Long = 0
+    private var lastServiceLayoutModified: Long = 0
+    private var lastLanguageFileCount = 0
+    private var lastServiceFileCount = 0
+    private var failedToLoad = false
+
+    private var languageLayouts = mutableListOf<CustomKeyboard>()
+    private var serviceLayouts = mutableMapOf<String, CustomKeyboard>()
+    private var currentLanguageLayoutIndex = 0
+
+
     private var isFloatingKeyboardOpen = false
     private var isFloatingKeyboard = false
     private var floatingKeyboardWidth: Int = 0
@@ -47,6 +62,7 @@ class CustomKeyboardService : InputMethodService() {
     private var isCtrlPressed = false
     private var isAltPressed = false
     private var isCapsPressed = false
+
 
     companion object {
         private const val TAG = "CustomKeyboardService"
@@ -71,42 +87,13 @@ class CustomKeyboardService : InputMethodService() {
     ////////////////////////////////////////////
     // Init the keyboard
     override fun onCreateInputView(): View? {
-        // Check width to prevent keyboard from crossing screen
-        screenWidth = getScreenWidth()
-        screenHeight = getScreenHeight()
-
-        if (floatingKeyboardWidth == 0) {
-            floatingKeyboardWidth = screenWidth
-        }
-        if (floatingKeyboardWidth > screenWidth) {
-            floatingKeyboardWidth = screenWidth
-        }
-
-        /*if (floatingKeyboardHeight == 0) {
-            floatingKeyboardHeight = screenHeight // TODO?
-        }
-        if (floatingKeyboardHeight > screenHeight) {
-            floatingKeyboardHeight = screenHeight
-        }*/
-
+        initWindowManager()
         createInputView()
-        return if (isFloatingKeyboard) {
-            createServiceKeyboard()
-            createFloatingKeyboard()
-            inputView
-        } else {
-            createStandardKeyboard()
-            inputView
-        } ?: run {
-            Log.e(TAG, "Error creating input view")
-            null
-        }
+        return inputView
     }
 
     override fun onCreate() {
         super.onCreate()
-        initWindowManager()
-        createInputView()
 
         // Register broadcast receivers
         registerReceiver(overlayPermissionReceiver, IntentFilter(Constants.ACTION_CHECK_OVERLAY_PERMISSION), RECEIVER_NOT_EXPORTED)
@@ -142,6 +129,30 @@ class CustomKeyboardService : InputMethodService() {
     }
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
+        // Check and load keyboard layouts.
+        loadAllKeyboardLayouts()
+
+        // Prevents bug where the thing doesn't close somehow.
+        closeFloatingKeyboard()
+
+        // Check width to prevent keyboard from crossing screen
+        screenWidth = getScreenWidth()
+        screenHeight = getScreenHeight()
+
+        if (floatingKeyboardWidth == 0) {
+            floatingKeyboardWidth = screenWidth
+        }
+        if (floatingKeyboardWidth > screenWidth) {
+            floatingKeyboardWidth = screenWidth
+        }
+        if (isFloatingKeyboard) {
+            createServiceKeyboard()
+            createFloatingKeyboard()
+        } else {
+            createStandardKeyboard()
+        } ?: run {
+            Log.e(TAG, "Error creating input view")
+        }
         super.onStartInputView(info, restarting)
     }
 
@@ -150,9 +161,8 @@ class CustomKeyboardService : InputMethodService() {
     // Handle window creation and inflation
     private fun createInputView() {
         inputView = null
-        inputView = layoutInflater.inflate(R.layout.input_view, null)
+        inputView = layoutInflater.inflate(R.layout.standard_keyboard_view, null)
     }
-
 
     private fun initWindowManager() {
         if (::windowManager.isInitialized) return // Check if already initialized
@@ -171,7 +181,7 @@ class CustomKeyboardService : InputMethodService() {
         floatingKeyboardView = layoutInflater.inflate(R.layout.floating_keyboard_view, null) as? CustomKeyboardView
 
         floatingKeyboardView?.let { view ->
-            val customKeyboard = loadKeyboardFromJson(R.raw.keyboard_default)
+            val customKeyboard = languageLayouts.get(currentLanguageLayoutIndex)
             if (customKeyboard != null) {
                 view.setKeyboard(customKeyboard)
                 setKeyboardActionListener(view)
@@ -190,7 +200,7 @@ class CustomKeyboardService : InputMethodService() {
                 view.post { floatingKeyboardHeight = view.measuredHeight }
                 isFloatingKeyboardOpen = true
             } else {
-                Log.e(TAG, "Failed to load keyboard for floating view")
+                Log.e(TAG, "Failed to load language keyboard layout")
             }
         } ?: Log.e(TAG, "Failed to inflate floating keyboard view")
     }
@@ -202,7 +212,7 @@ class CustomKeyboardService : InputMethodService() {
         }
         serviceKeyboardView = rootView.findViewById(R.id.service_keyboard_view) as? CustomKeyboardView
         serviceKeyboardView?.let { view ->
-            val customKeyboard = loadKeyboardFromJson(R.raw.keyboard_service)
+            val customKeyboard = serviceLayouts["keyboard-service"] // Explicitly load the service layout
             if (customKeyboard != null) {
                 view.setKeyboard(customKeyboard)
                 setKeyboardActionListener(view)
@@ -214,14 +224,12 @@ class CustomKeyboardService : InputMethodService() {
         return null
     }
 
-
     private fun createStandardKeyboard(): View? {
         inputView?.let { rootView ->
             keyboardView = rootView.findViewById(R.id.keyboard_view) as? CustomKeyboardView
 
             keyboardView?.let { view ->
-                // Load the keyboard layout from JSON
-                val customKeyboard = loadKeyboardFromJson(R.raw.keyboard_default)
+                val customKeyboard = languageLayouts.get(currentLanguageLayoutIndex)
                 if (customKeyboard != null) {
                     view.setKeyboard(customKeyboard)
                     setKeyboardActionListener(view)
@@ -240,7 +248,23 @@ class CustomKeyboardService : InputMethodService() {
     private fun switchKeyboardMode() {
         closeAllKeyboards()
         isFloatingKeyboard = !isFloatingKeyboard
+        recreateKeyboards()
+    }
 
+    private fun cycleLanguageLayout() {
+        if (languageLayouts.isNotEmpty()) {
+            // Increment the index and wrap around
+            currentLanguageLayoutIndex = (currentLanguageLayoutIndex + 1) % languageLayouts.size
+            val lsl = languageLayouts.size
+            // Log the current layout for debugging
+            closeAllKeyboards()
+            recreateKeyboards()
+        } else {
+            Log.w(TAG, "No language layouts available to cycle.")
+        }
+    }
+
+    private fun recreateKeyboards(){
         inputView = if (isFloatingKeyboard) {
             createInputView()
             createServiceKeyboard()
@@ -258,6 +282,8 @@ class CustomKeyboardService : InputMethodService() {
 
         invalidateAllKeysOnBothKeyboards()
     }
+
+
 
     ////////////////////////////////////////////
     // Helper functions for closing keyboards
@@ -359,9 +385,7 @@ class CustomKeyboardService : InputMethodService() {
                 windowManager.updateViewLayout(view, layoutParams)
             }
 
-            // Workaround to mitigate flickering
-            closeFloatingKeyboard()
-            createFloatingKeyboard()
+            updateFloatingKeyboard()
         }
     }
 
@@ -452,13 +476,22 @@ class CustomKeyboardService : InputMethodService() {
                         }
                         handleKey(primaryCode, label, modifiedMetaState)
                         resetMetaStates()
+                        keyboardView.updateMetaState(isShiftPressed, isCtrlPressed, isAltPressed, isCapsPressed)
                     }
                 }
             }
 
             override fun onText(text: CharSequence) {
-                currentInputConnection.commitText(text, 1)
+                val processedText = if (isShiftPressed || isCapsPressed) {
+                    resetMetaStates()
+                    keyboardView.updateMetaState(isShiftPressed, isCtrlPressed, isAltPressed, isCapsPressed)
+                    text.toString().uppercase()
+                } else {
+                    text.toString()
+                }
+                currentInputConnection.commitText(processedText, 1)
             }
+
 
             override fun onRelease(codes: Int) {
             }
@@ -541,6 +574,10 @@ class CustomKeyboardService : InputMethodService() {
                 Constants.KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN -> translateVertFloatingKeyboard(
                     Constants.KEYBOARD_TRANSLATION_INCREMENT
                 )
+
+                Constants.KEYCODE_CYCLE_LANGUAGE_LAYOUT -> {
+                    cycleLanguageLayout()
+                }
 
             }
         }
@@ -670,17 +707,17 @@ class CustomKeyboardService : InputMethodService() {
 
 
     ////////////////////////////////////////////
-    // Handle files
-    private fun ensureLayoutsDirectoryExists(): Boolean {
-        val layoutsDir = File(Constants.LAYOUTS_DIRECTORY)
-        if (!layoutsDir.exists()) {
-            return layoutsDir.mkdirs()
+    // Handle directories and files
+    private fun ensureDirectoryExists(directoryPath: String): Boolean {
+        val directory = File(directoryPath)
+        if (!directory.exists()) {
+            return directory.mkdirs()
         }
         return true
     }
 
-    private fun copyKeyboardLayoutIfMissing(fileName: String, rawResourceId: Int) {
-        val layoutFile = File(Constants.LAYOUTS_DIRECTORY, fileName)
+    private fun copyKeyboardLayoutIfMissing(filePath: String, rawResourceId: Int) {
+        val layoutFile = File(filePath)
 
         if (!layoutFile.exists()) {
             try {
@@ -693,28 +730,224 @@ class CustomKeyboardService : InputMethodService() {
                 }
                 outputStream.close()
                 inputStream.close()
-                Log.i(TAG, "Successfully copied $fileName to layouts directory")
+                Log.i(TAG, "Successfully copied ${layoutFile.name} to ${layoutFile.parent}")
             } catch (e: IOException) {
-                Log.e(TAG, "Failed to copy $fileName", e)
+                Log.e(TAG, "Failed to copy ${layoutFile.name}", e)
             }
         } else {
-            Log.i(TAG, "$fileName already exists, skipping copy")
+            Log.i(TAG, "${layoutFile.name} already exists, skipping copy")
         }
     }
 
-
-
-
-
     private fun copyDefaultKeyboardLayouts() {
-        if (!ensureLayoutsDirectoryExists()) {
-            Log.e(TAG, "Failed to create layouts directory")
+        // Ensure base and subdirectories exist
+        if (!ensureDirectoryExists(Constants.LAYOUTS_LANGUAGE_DIRECTORY)) {
+            Log.e(TAG, "Failed to create layouts-language directory")
+            return
+        }
+        if (!ensureDirectoryExists(Constants.LAYOUTS_SERVICE_DIRECTORY)) {
+            Log.e(TAG, "Failed to create layouts-service directory")
             return
         }
 
-        copyKeyboardLayoutIfMissing("keyboard-default.json", R.raw.keyboard_default)
-        copyKeyboardLayoutIfMissing("keyboard-service.json", R.raw.keyboard_service)
+        // Copy files to the respective directories
+        copyKeyboardLayoutIfMissing(
+            "${Constants.LAYOUTS_LANGUAGE_DIRECTORY}/keyboard-default.json",
+            R.raw.keyboard_default
+        )
+        copyKeyboardLayoutIfMissing(
+            "${Constants.LAYOUTS_SERVICE_DIRECTORY}/keyboard-service.json",
+            R.raw.keyboard_service
+        )
     }
+
+
+    private fun loadAllKeyboardLayouts() {
+        val languageDir = File(Constants.LAYOUTS_LANGUAGE_DIRECTORY)
+        val serviceDir = File(Constants.LAYOUTS_SERVICE_DIRECTORY)
+
+        // Get the current file counts
+        val currentLanguageFileCount = languageDir.listFiles { _, name -> name.endsWith(".json") }?.size ?: 0
+        val currentServiceFileCount = serviceDir.listFiles { _, name -> name.endsWith(".json") }?.size ?: 0
+
+        // Check if files have been modified
+        val currentLanguageModified = getDirectoryLastModified(languageDir)
+        val currentServiceModified = getDirectoryLastModified(serviceDir)
+
+        val languageFilesChanged = currentLanguageFileCount != lastLanguageFileCount
+        val serviceFilesChanged = currentServiceFileCount != lastServiceFileCount
+
+        // Reload only if files have changed or count has changed
+        if (languageFilesChanged || serviceFilesChanged || currentLanguageModified > lastLanguageLayoutModified || currentServiceModified > lastServiceLayoutModified) {
+            Log.i(TAG, "Reloading keyboard layouts due to file changes or count mismatch.")
+
+            // Clear previous data
+            serviceLayouts.clear()
+            languageLayouts.clear()
+
+            // Reload layouts
+            loadLanguageLayouts()
+            loadServiceLayouts()
+
+            // Update timestamps and file counts
+            lastLanguageLayoutModified = currentLanguageModified
+            lastServiceLayoutModified = currentServiceModified
+            lastLanguageFileCount = currentLanguageFileCount
+            lastServiceFileCount = currentServiceFileCount
+        } else {
+            Log.i(TAG, "No changes in keyboard layout files or count. Skipping reload.")
+        }
+    }
+
+    private fun getDirectoryLastModified(directory: File): Long {
+        if (!directory.exists() || !directory.isDirectory) return 0L
+
+        // Find the most recent modification time of all files in the directory
+        return directory.listFiles { _, name -> name.endsWith(".json") }
+            ?.maxOfOrNull { it.lastModified() } ?: 0L
+    }
+
+    private fun loadLanguageLayouts() {
+        val languageDir = File(Constants.LAYOUTS_LANGUAGE_DIRECTORY)
+        if (!languageDir.exists() || !languageDir.isDirectory) {
+            showErrorPopup("Language layouts directory is missing.")
+            return
+        }
+
+        languageLayouts.clear()
+        languageDir.listFiles { _, name -> name.endsWith(".json") }?.sorted()?.forEach { file ->
+            CustomKeyboard.fromJsonFile(this, file) { errorMsg ->
+                failedToLoad = true
+                showErrorPopup(errorMsg) // Handle errors by showing the popup
+                Log.e(TAG, errorMsg)
+            }?.let { keyboard ->
+                languageLayouts.add(keyboard)
+                Log.i(TAG, "Loaded language layout: ${file.name}")
+            }
+        }
+
+        if (languageLayouts.isEmpty()) {
+            failedToLoad = true
+            showErrorPopup("No valid language layouts found. Loading fallback layout.")
+            loadFallbackLanguageLayout()
+        }
+    }
+
+    private fun loadServiceLayouts() {
+        val serviceDir = File(Constants.LAYOUTS_SERVICE_DIRECTORY)
+        if (!serviceDir.exists() || !serviceDir.isDirectory) {
+            showErrorPopup("Service layouts directory is missing.")
+            return
+        }
+
+        serviceLayouts.clear()
+        serviceDir.listFiles { _, name -> name.endsWith(".json") }?.forEach { file ->
+            CustomKeyboard.fromJsonFile(this, file) { errorMsg ->
+                failedToLoad = true
+                showErrorPopup(errorMsg) // Handle errors by showing the popup
+                Log.e(TAG, errorMsg)
+            }?.let { keyboard ->
+                val layoutName = file.nameWithoutExtension
+                serviceLayouts[layoutName] = keyboard
+                Log.i(TAG, "Loaded service layout: $layoutName")
+            }
+        }
+
+        if (serviceLayouts.isEmpty()) {
+            showErrorPopup("No valid service layouts found. Loading fallback layout.")
+            loadFallbackServiceLayout()
+        }
+    }
+
+
+    private fun loadFallbackLanguageLayout() {
+        try {
+            val json = resources.openRawResource(R.raw.keyboard_default).bufferedReader().use { it.readText() }
+            CustomKeyboard.fromJson(this, json)?.let {
+                languageLayouts.add(it)
+                Log.i(TAG, "Loaded fallback language layout from resources")
+            } ?: run {
+                val errorMsg = "Failed to parse fallback language layout!\nJSON:\n$json"
+                showErrorPopup(errorMsg)
+            }
+        } catch (e: Exception) {
+            val errorMsg = "Error loading fallback language layout: ${e.message}"
+            showErrorPopup(errorMsg)
+            Log.e(TAG, errorMsg, e)
+        }
+    }
+
+    private fun loadFallbackServiceLayout() {
+        try {
+            val json = resources.openRawResource(R.raw.keyboard_service).bufferedReader().use { it.readText() }
+            CustomKeyboard.fromJson(this, json)?.let {
+                serviceLayouts["keyboard-service"] = it
+                Log.i(TAG, "Loaded fallback service layout from resources")
+            } ?: run {
+                val errorMsg = "Failed to parse fallback service layout!\nJSON:\n$json"
+                showErrorPopup(errorMsg)
+            }
+        } catch (e: Exception) {
+            val errorMsg = "Error loading fallback service layout: ${e.message}"
+            showErrorPopup(errorMsg)
+            Log.e(TAG, errorMsg, e)
+        }
+    }
+
+    private var errorPopupView: View? = null
+
+    private fun showErrorPopup(message: String) {
+        // Remove existing popup to prevent duplicates
+        errorPopupView?.let {
+            windowManager.removeView(it)
+            errorPopupView = null
+        }
+
+        // Inflate the custom error popup layout
+        val inflater = LayoutInflater.from(this)
+        errorPopupView = inflater.inflate(R.layout.error_notification_view, null).apply {
+            findViewById<TextView>(R.id.error_message).text = message
+
+            // Add click listener to a close button (e.g., ImageView with ID: error_close)
+            findViewById<View>(R.id.error_close).setOnClickListener {
+                dismissErrorPopup()
+            }
+
+            // Optional: Add a click listener anywhere on the popup to dismiss
+            setOnClickListener {
+                dismissErrorPopup()
+            }
+        }
+
+        // Define WindowManager.LayoutParams for positioning
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT, // Full width
+            WindowManager.LayoutParams.WRAP_CONTENT, // Auto height
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, // Overlay permission
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.CENTER or Gravity.CENTER_HORIZONTAL // Position at the center
+            y = 50 // Optional: Add some margin from the top edge
+        }
+
+        try {
+            // Add the error popup to the WindowManager
+            windowManager.addView(errorPopupView, params)
+        } catch (e: Exception) {
+            Log.e("CustomKeyboardService", "Error adding popup view: ${e.message}", e)
+        }
+    }
+
+    // Function to dismiss the error popup manually
+    private fun dismissErrorPopup() {
+        errorPopupView?.let {
+            windowManager.removeView(it)
+            errorPopupView = null
+        }
+    }
+
+
 
 
     ////////////////////////////////////////////

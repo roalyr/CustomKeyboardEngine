@@ -162,8 +162,7 @@
           "label": "flt",
           "keyCode": -12,
           "keyWidth": 12,
-          "isModifier": true,
-          "edgeFlags": "left"
+          "isModifier": true
         },
         {
           "label": "cap",
@@ -174,8 +173,7 @@
         },
         {
           "label": "lyt",
-          "smallLabel": "num",
-          "keyCode": -1,
+          "keyCode": -21,
           "keyCodeLongPress": -1,
           "keyWidth": 12,
           "isModifier": true,

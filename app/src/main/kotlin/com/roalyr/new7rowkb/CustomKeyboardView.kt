@@ -370,8 +370,18 @@ class CustomKeyboardView @JvmOverloads constructor(
                             paint.color = keySmallTextColor
                             paint.textSize = keyHeight * 0.3f
                             paint.textAlign = Paint.Align.CENTER
+
+                            // Transform the label dynamically based on meta states
+                            val renderedLabel = if (key.isModifier && isMetaKeyToggled(key.keyCode)) {
+                                smallLabel.uppercase()
+                            } else if (!key.isModifier && (isShiftOn || isCapsLockOn)) {
+                                smallLabel.uppercase()
+                            } else {
+                                smallLabel.lowercase()
+                            }
+
                             canvas.drawText(
-                                smallLabel,
+                                renderedLabel,
                                 keyBounds.centerX(),
                                 keyBounds.top + keyHeight * 0.35f, // Upper half position
                                 paint
@@ -383,8 +393,18 @@ class CustomKeyboardView @JvmOverloads constructor(
                             paint.color = keyTextColor
                             paint.textSize = keyHeight * 0.35f
                             paint.textAlign = Paint.Align.CENTER
+
+                            // Transform the label dynamically based on meta states
+                            val renderedLabel = if (key.isModifier && isMetaKeyToggled(key.keyCode)) {
+                                label.uppercase()
+                            } else if (!key.isModifier && (isShiftOn || isCapsLockOn)) {
+                                label.uppercase()
+                            } else {
+                                label.lowercase()
+                            }
+
                             canvas.drawText(
-                                label,
+                                renderedLabel,
                                 keyBounds.centerX(),
                                 keyBounds.centerY() + keyHeight * 0.3f, // Slightly lower in the middle half
                                 paint

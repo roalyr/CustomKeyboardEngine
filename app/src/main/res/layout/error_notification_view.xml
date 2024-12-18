@@ -1,0 +1,26 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/error_background"
+    android:padding="16dp">
+
+    <!-- Error Message -->
+    <TextView
+        android:id="@+id/error_message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/black"
+        android:textSize="16sp"
+        android:text="Error Message Here"
+        android:layout_centerInParent="true" />
+
+    <!-- Close Button (X Icon) -->
+    <ImageView
+        android:id="@+id/error_close"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/icons8_close"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="8dp"
+        android:contentDescription="Close" />
+</RelativeLayout>

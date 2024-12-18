@@ -1,6 +1,7 @@
 package com.roalyr.new7rowkb
 
 import android.content.Context
+import android.util.Log
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -126,15 +127,27 @@ class CustomKeyboard(
 
     companion object {
         fun fromJson(context: Context, json: String): CustomKeyboard {
-            val layout = Json { coerceInputValues = true }
-                .decodeFromString<KeyboardLayout>(json)
+            val layout = Json { coerceInputValues = true }.decodeFromString<KeyboardLayout>(json)
             return CustomKeyboard(context, layout)
         }
 
-        fun fromJsonFile(context: Context, file: File): CustomKeyboard? {
-            return if (file.exists()) {
-                file.readText().let { fromJson(context, it) }
-            } else null
+        fun fromJsonFile(
+            context: Context,
+            file: File,
+            onError: (String) -> Unit // Error handler callback
+        ): CustomKeyboard? {
+            return try {
+                val content = file.readText()
+                Log.i("CustomKeyboard", "Attempting to parse file: ${file.name}")
+                fromJson(context, content)
+            } catch (e: Exception) {
+                val errorMessage = "Error parsing file ${file.name}: ${e.message}"
+                Log.e("CustomKeyboard", errorMessage, e)
+                onError(errorMessage) // Trigger the error callback
+                null
+            }
         }
+
+
     }
 }

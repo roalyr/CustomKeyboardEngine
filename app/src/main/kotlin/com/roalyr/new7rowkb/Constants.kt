@@ -34,6 +34,7 @@ class Constants {
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT = -18
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_UP = -19
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN = -20
+        const val KEYCODE_CYCLE_LANGUAGE_LAYOUT = -21
         // Default values.
         const val DEFAULT_KEY_HEIGHT = 40f
         const val DEFAULT_KEY_WIDTH = 10f
@@ -41,12 +42,16 @@ class Constants {
         const val DEFAULT_KEY_GAP = 1f
 
         // Paths
-        // Base App Directory
+        // Base directory for the app
         val APP_DIRECTORY: String
             get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)}/New7rowKB"
 
-        // Layouts subdirectory
-        val LAYOUTS_DIRECTORY: String
-            get() = "$APP_DIRECTORY/layouts"
+        // Correct path for language layouts
+        val LAYOUTS_LANGUAGE_DIRECTORY: String
+            get() = "$APP_DIRECTORY/layouts/language-layouts"
+
+        // Correct path for service layouts
+        val LAYOUTS_SERVICE_DIRECTORY: String
+            get() = "$APP_DIRECTORY/layouts/service-layouts"
     }
 }

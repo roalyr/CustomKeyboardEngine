@@ -1,32 +1,21 @@
 package com.roalyr.new7rowkb
 
-import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.inputmethodservice.InputMethodService
-import android.os.Build
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
-import android.view.Gravity
 import android.view.KeyEvent
-import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
-import android.widget.TextView
-import android.widget.Toast
-import androidx.core.content.ContextCompat
-import kotlinx.serialization.json.Json
 import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
 
 class CustomKeyboardService : InputMethodService() {
 
@@ -36,17 +25,9 @@ class CustomKeyboardService : InputMethodService() {
     private var serviceKeyboardView: CustomKeyboardView? = null
     private var inputView: View? = null
 
-    // Tracks the last modification time of the layout directories
-    private var lastLanguageLayoutModified: Long = 0
-    private var lastServiceLayoutModified: Long = 0
-    private var lastLanguageFileCount = 0
-    private var lastServiceFileCount = 0
-    private var failedToLoad = false
-
-    private var languageLayouts = mutableListOf<CustomKeyboard>()
-    private var serviceLayouts = mutableMapOf<String, CustomKeyboard>()
+    private var languageLayouts = mutableListOf<Pair<CustomKeyboard, Boolean>>()
+    private var serviceLayouts = mutableMapOf<String, Pair<CustomKeyboard, Boolean>>()
     private var currentLanguageLayoutIndex = 0
-
 
     private var isFloatingKeyboardOpen = false
     private var isFloatingKeyboard = false
@@ -71,7 +52,7 @@ class CustomKeyboardService : InputMethodService() {
     private val overlayPermissionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Constants.ACTION_CHECK_OVERLAY_PERMISSION) {
-                checkAndRequestOverlayPermission()
+                ActivityPermissionRequest.checkAndRequestOverlayPermission(context)
             }
         }
     }
@@ -79,7 +60,7 @@ class CustomKeyboardService : InputMethodService() {
     private val storagePermissionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Constants.ACTION_CHECK_STORAGE_PERMISSIONS) {
-                checkAndRequestStoragePermissions()
+                ActivityPermissionRequest.checkAndRequestStoragePermissions(context)
             }
         }
     }
@@ -87,71 +68,44 @@ class CustomKeyboardService : InputMethodService() {
     ////////////////////////////////////////////
     // Init the keyboard
     override fun onCreateInputView(): View? {
-        initWindowManager()
         createInputView()
         return inputView
     }
 
     override fun onCreate() {
-        super.onCreate()
-
+        initWindowManager()
         // Register broadcast receivers
         registerReceiver(overlayPermissionReceiver, IntentFilter(Constants.ACTION_CHECK_OVERLAY_PERMISSION), RECEIVER_NOT_EXPORTED)
         registerReceiver(storagePermissionReceiver, IntentFilter(Constants.ACTION_CHECK_STORAGE_PERMISSIONS), RECEIVER_NOT_EXPORTED)
-
         // Force ask for permissions
         sendBroadcast(Intent(Constants.ACTION_CHECK_STORAGE_PERMISSIONS))
         sendBroadcast(Intent(Constants.ACTION_CHECK_OVERLAY_PERMISSION))
-        copyDefaultKeyboardLayouts()
+        ClassFunctionsFiles.copyDefaultKeyboardLayouts(windowManager, this, resources)
+        super.onCreate()
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         // Unregister broadcast receivers
         unregisterReceiver(overlayPermissionReceiver)
         unregisterReceiver(storagePermissionReceiver)
-
         closeAllKeyboards()
+        super.onDestroy()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
-        // Close the floating keyboard before the input view is recreated
-        // TODO: make sure the window is properly bounded.
-        screenWidth = getScreenWidth()
-        screenHeight = getScreenHeight()
-
+        recreateKeyboards()
         // After rotating the screen - reposition the floating KB vertically within new limits.
         translateVertFloatingKeyboard(floatingKeyboardPosY)
-
-        // Prevents bug where the thing doesn't close somehow.
-        closeFloatingKeyboard()
         super.onConfigurationChanged(newConfig)
     }
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
-        // Check and load keyboard layouts.
-        loadAllKeyboardLayouts()
-
-        // Prevents bug where the thing doesn't close somehow.
-        closeFloatingKeyboard()
-
-        // Check width to prevent keyboard from crossing screen
-        screenWidth = getScreenWidth()
-        screenHeight = getScreenHeight()
-
-        if (floatingKeyboardWidth == 0) {
-            floatingKeyboardWidth = screenWidth
-        }
-        if (floatingKeyboardWidth > screenWidth) {
-            floatingKeyboardWidth = screenWidth
-        }
-        if (isFloatingKeyboard) {
-            createServiceKeyboard()
-            createFloatingKeyboard()
+        if (!restarting){
+            Log.i(TAG, "Starting input view. Reloading layouts.")
+            reloadKeyboardLayouts()
+            recreateKeyboards()
         } else {
-            createStandardKeyboard()
-        } ?: run {
-            Log.e(TAG, "Error creating input view")
+            //Log.i(TAG, "Restarting input view on the same editor. NOT Reloading layouts.")
         }
         super.onStartInputView(info, restarting)
     }
@@ -171,101 +125,150 @@ class CustomKeyboardService : InputMethodService() {
 
     private fun createFloatingKeyboard() {
         if (!Settings.canDrawOverlays(this)) {
-            Log.e(TAG, "Overlay permission denied")
+            val errorMsg = "Overlay permission denied"
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
             return
         }
-
-        inputView?.findViewById<View>(R.id.service_keyboard_view)?.requestFocus()
-        screenWidth = getScreenWidth()
 
         floatingKeyboardView = layoutInflater.inflate(R.layout.floating_keyboard_view, null) as? CustomKeyboardView
 
         floatingKeyboardView?.let { view ->
-            val customKeyboard = languageLayouts.get(currentLanguageLayoutIndex)
-            if (customKeyboard != null) {
-                view.setKeyboard(customKeyboard)
-                setKeyboardActionListener(view)
+            val (customKeyboard, isFallback) = languageLayouts.getOrNull(currentLanguageLayoutIndex)
+                ?: run {
+                    val errorMsg = "No valid language layout found at index: $currentLanguageLayoutIndex"
+                    ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+                    return
+                }
 
-                val params = WindowManager.LayoutParams(
-                    floatingKeyboardWidth,
-                    WindowManager.LayoutParams.WRAP_CONTENT,
-                    floatingKeyboardPosX,
-                    floatingKeyboardPosY,
-                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                    PixelFormat.TRANSLUCENT
-                )
+            view.setKeyboard(customKeyboard)
+            setKeyboardActionListener(view)
 
-                windowManager.addView(view, params)
-                view.post { floatingKeyboardHeight = view.measuredHeight }
-                isFloatingKeyboardOpen = true
-            } else {
-                Log.e(TAG, "Failed to load language keyboard layout")
+            if (isFallback) {
+                val errorMsg = "Using fallback language layout at index: $currentLanguageLayoutIndex"
+                ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
             }
-        } ?: Log.e(TAG, "Failed to inflate floating keyboard view")
+
+            val params = WindowManager.LayoutParams(
+                floatingKeyboardWidth,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                floatingKeyboardPosX,
+                floatingKeyboardPosY,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT
+            )
+
+            try {
+                windowManager.addView(view, params)
+                isFloatingKeyboardOpen = true
+            } catch (e: Exception) {
+                val errorMsg = "Failed to add floating keyboard view: ${e.message}"
+                ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+            }
+        } ?: run {
+            val errorMsg = "Failed to inflate floating keyboard view"
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+        }
     }
+
 
     private fun createServiceKeyboard(): View? {
         val rootView = inputView ?: run {
-            Log.e(TAG, "Input view is null")
+            val errorMsg = "Input view is null"
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
             return null
         }
+
         serviceKeyboardView = rootView.findViewById(R.id.service_keyboard_view) as? CustomKeyboardView
         serviceKeyboardView?.let { view ->
-            val customKeyboard = serviceLayouts["keyboard-service"] // Explicitly load the service layout
-            if (customKeyboard != null) {
+            // TODO: Load a service keyboard according to settings, For now - only the one with default name.
+            val customKeyboardPair = serviceLayouts[Constants.LAYOUT_SERVICE_DEFAULT]
+            if (customKeyboardPair != null) {
+                val (customKeyboard, isFallback) = customKeyboardPair
                 view.setKeyboard(customKeyboard)
                 setKeyboardActionListener(view)
-                return rootView
+
+                if (isFallback) {
+                    val errorMsg = "Using fallback service layout $Constants.LAYOUT_SERVICE_DEFAULT."
+                    ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+                }
             } else {
-                Log.e(TAG, "Failed to load service keyboard layout")
+                val errorMsg = "Service keyboard layout not found."
+                ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
             }
-        } ?: Log.e(TAG, "Service keyboard view not found")
-        return null
+        } ?: run {
+            val errorMsg = "Service keyboard view not found."
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+        }
+        return rootView
     }
+
 
     private fun createStandardKeyboard(): View? {
-        inputView?.let { rootView ->
-            keyboardView = rootView.findViewById(R.id.keyboard_view) as? CustomKeyboardView
+        val rootView = inputView ?: run {
+            val errorMsg = "Input view is null."
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+            return null
+        }
 
-            keyboardView?.let { view ->
-                val customKeyboard = languageLayouts.get(currentLanguageLayoutIndex)
-                if (customKeyboard != null) {
-                    view.setKeyboard(customKeyboard)
-                    setKeyboardActionListener(view)
+        keyboardView = rootView.findViewById(R.id.keyboard_view) as? CustomKeyboardView
+        keyboardView?.let { view ->
+            val (customKeyboard, isFallback) = languageLayouts.getOrNull(currentLanguageLayoutIndex)
+                ?: run {
+                    val errorMsg = "No valid language layout found at index: $currentLanguageLayoutIndex"
+                    ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
                     return rootView
-                } else {
-                    Log.e(TAG, "Failed to load standard keyboard layout")
                 }
-            } ?: Log.e(TAG, "Keyboard view is null")
-        } ?: Log.e(TAG, "Input view is null")
+
+            view.setKeyboard(customKeyboard)
+            setKeyboardActionListener(view)
+
+            if (isFallback) {
+                val errorMsg = "Using fallback language layout at index: $currentLanguageLayoutIndex"
+                ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+            }
+
+            return rootView
+        } ?: run {
+            val errorMsg = "Keyboard view is null."
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+        }
         return null
     }
+
+
 
 
     ////////////////////////////////////////////
     // Unified method for keyboard switching
-    private fun switchKeyboardMode() {
-        closeAllKeyboards()
-        isFloatingKeyboard = !isFloatingKeyboard
+    private fun cycleLanguageLayout() {
+        currentLanguageLayoutIndex = (currentLanguageLayoutIndex + 1) % languageLayouts.size
+        Log.i(TAG, "Cycled to language layout index: $currentLanguageLayoutIndex")
+        reloadKeyboardLayouts() // Always reload to reflect changes
         recreateKeyboards()
     }
 
-    private fun cycleLanguageLayout() {
-        if (languageLayouts.isNotEmpty()) {
-            // Increment the index and wrap around
-            currentLanguageLayoutIndex = (currentLanguageLayoutIndex + 1) % languageLayouts.size
-            val lsl = languageLayouts.size
-            // Log the current layout for debugging
-            closeAllKeyboards()
-            recreateKeyboards()
-        } else {
-            Log.w(TAG, "No language layouts available to cycle.")
-        }
+    private fun switchKeyboardMode() {
+        isFloatingKeyboard = !isFloatingKeyboard
+        Log.i(TAG, "Switched keyboard mode to ${if (isFloatingKeyboard) "Floating" else "Standard"}.")
+        reloadKeyboardLayouts() // Reload and apply the updated mode
+        recreateKeyboards()
     }
 
+
     private fun recreateKeyboards(){
+        closeAllKeyboards()
+        screenHeight = getScreenHeight()
+        screenWidth = getScreenWidth()
+
         inputView = if (isFloatingKeyboard) {
+            // Check width to prevent keyboard from crossing screen
+            if (floatingKeyboardWidth == 0) {
+                floatingKeyboardWidth = getScreenWidth()
+            }
+            if (floatingKeyboardWidth > screenWidth) {
+                floatingKeyboardWidth = getScreenWidth()
+            }
             createInputView()
             createServiceKeyboard()
             createFloatingKeyboard()
@@ -278,9 +281,12 @@ class CustomKeyboardService : InputMethodService() {
 
         inputView?.let {
             setInputView(it)
-        } ?: Log.e(TAG, "Error creating new input view")
+        } ?: {
+            val errorMsg = "Error creating new input view"
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+        }
 
-        invalidateAllKeysOnBothKeyboards()
+        invalidateAllKeysOnAllKeyboards()
     }
 
 
@@ -300,7 +306,8 @@ class CustomKeyboardService : InputMethodService() {
                     windowManager.removeView(view)
                     isFloatingKeyboardOpen = false
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error closing floating keyboard", e)
+                    val errorMsg = "Error closing floating keyboard: ${e.message}"
+                    ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
                 } finally {
                     floatingKeyboardView = null
                 }
@@ -324,28 +331,7 @@ class CustomKeyboardService : InputMethodService() {
 
     ////////////////////////////////////////////
     // Helper functions
-    private fun loadKeyboardFromJson(resourceId: Int): CustomKeyboard? {
-        return try {
-            val inputStream = resources.openRawResource(resourceId)
-            val jsonContent = inputStream.bufferedReader().use { it.readText() }
-
-            // Use a Json instance that ignores unknown keys
-            val json = Json { ignoreUnknownKeys = true }
-
-            // Decode JSON into KeyboardLayout
-            val keyboardLayout = json.decodeFromString<KeyboardLayout>(jsonContent)
-
-            // Return a CustomKeyboard instance
-            CustomKeyboard(this, keyboardLayout)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading JSON keyboard: ${e.message}")
-            Toast.makeText(this, "Error loading keyboard: ${e.message}", Toast.LENGTH_LONG).show()
-            null
-        }
-    }
-
-
-    private fun invalidateAllKeysOnBothKeyboards() {
+    private fun invalidateAllKeysOnAllKeyboards() {
         floatingKeyboardView?.invalidateAllKeys()
         keyboardView?.invalidateAllKeys()
         serviceKeyboardView?.invalidateAllKeys()
@@ -384,7 +370,6 @@ class CustomKeyboardService : InputMethodService() {
                 layoutParams.width = floatingKeyboardWidth
                 windowManager.updateViewLayout(view, layoutParams)
             }
-
             updateFloatingKeyboard()
         }
     }
@@ -425,9 +410,6 @@ class CustomKeyboardService : InputMethodService() {
         windowManager.defaultDisplay.getMetrics(displayMetrics)
         return displayMetrics.heightPixels
     }
-
-
-
 
 
 
@@ -509,10 +491,6 @@ class CustomKeyboardService : InputMethodService() {
             }
         })
     }
-
-
-
-
 
 
     ////////////////////////////////////////////
@@ -706,289 +684,124 @@ class CustomKeyboardService : InputMethodService() {
     }
 
 
-    ////////////////////////////////////////////
-    // Handle directories and files
-    private fun ensureDirectoryExists(directoryPath: String): Boolean {
-        val directory = File(directoryPath)
-        if (!directory.exists()) {
-            return directory.mkdirs()
-        }
-        return true
-    }
+    private fun reloadKeyboardLayouts() {
+        Log.i(TAG, "Reloading all keyboard layouts.")
 
-    private fun copyKeyboardLayoutIfMissing(filePath: String, rawResourceId: Int) {
-        val layoutFile = File(filePath)
-
-        if (!layoutFile.exists()) {
-            try {
-                val inputStream = resources.openRawResource(rawResourceId)
-                val outputStream = FileOutputStream(layoutFile)
-                val buffer = ByteArray(1024)
-                var length: Int
-                while (inputStream.read(buffer).also { length = it } > 0) {
-                    outputStream.write(buffer, 0, length)
-                }
-                outputStream.close()
-                inputStream.close()
-                Log.i(TAG, "Successfully copied ${layoutFile.name} to ${layoutFile.parent}")
-            } catch (e: IOException) {
-                Log.e(TAG, "Failed to copy ${layoutFile.name}", e)
-            }
-        } else {
-            Log.i(TAG, "${layoutFile.name} already exists, skipping copy")
-        }
-    }
-
-    private fun copyDefaultKeyboardLayouts() {
-        // Ensure base and subdirectories exist
-        if (!ensureDirectoryExists(Constants.LAYOUTS_LANGUAGE_DIRECTORY)) {
-            Log.e(TAG, "Failed to create layouts-language directory")
-            return
-        }
-        if (!ensureDirectoryExists(Constants.LAYOUTS_SERVICE_DIRECTORY)) {
-            Log.e(TAG, "Failed to create layouts-service directory")
-            return
-        }
-
-        // Copy files to the respective directories
-        copyKeyboardLayoutIfMissing(
-            "${Constants.LAYOUTS_LANGUAGE_DIRECTORY}/keyboard-default.json",
-            R.raw.keyboard_default
-        )
-        copyKeyboardLayoutIfMissing(
-            "${Constants.LAYOUTS_SERVICE_DIRECTORY}/keyboard-service.json",
-            R.raw.keyboard_service
-        )
-    }
-
-
-    private fun loadAllKeyboardLayouts() {
-        val languageDir = File(Constants.LAYOUTS_LANGUAGE_DIRECTORY)
-        val serviceDir = File(Constants.LAYOUTS_SERVICE_DIRECTORY)
-
-        // Get the current file counts
-        val currentLanguageFileCount = languageDir.listFiles { _, name -> name.endsWith(".json") }?.size ?: 0
-        val currentServiceFileCount = serviceDir.listFiles { _, name -> name.endsWith(".json") }?.size ?: 0
-
-        // Check if files have been modified
-        val currentLanguageModified = getDirectoryLastModified(languageDir)
-        val currentServiceModified = getDirectoryLastModified(serviceDir)
-
-        val languageFilesChanged = currentLanguageFileCount != lastLanguageFileCount
-        val serviceFilesChanged = currentServiceFileCount != lastServiceFileCount
-
-        // Reload only if files have changed or count has changed
-        if (languageFilesChanged || serviceFilesChanged || currentLanguageModified > lastLanguageLayoutModified || currentServiceModified > lastServiceLayoutModified) {
-            Log.i(TAG, "Reloading keyboard layouts due to file changes or count mismatch.")
-
-            // Clear previous data
-            serviceLayouts.clear()
-            languageLayouts.clear()
-
-            // Reload layouts
-            loadLanguageLayouts()
-            loadServiceLayouts()
-
-            // Update timestamps and file counts
-            lastLanguageLayoutModified = currentLanguageModified
-            lastServiceLayoutModified = currentServiceModified
-            lastLanguageFileCount = currentLanguageFileCount
-            lastServiceFileCount = currentServiceFileCount
-        } else {
-            Log.i(TAG, "No changes in keyboard layout files or count. Skipping reload.")
-        }
-    }
-
-    private fun getDirectoryLastModified(directory: File): Long {
-        if (!directory.exists() || !directory.isDirectory) return 0L
-
-        // Find the most recent modification time of all files in the directory
-        return directory.listFiles { _, name -> name.endsWith(".json") }
-            ?.maxOfOrNull { it.lastModified() } ?: 0L
-    }
-
-    private fun loadLanguageLayouts() {
-        val languageDir = File(Constants.LAYOUTS_LANGUAGE_DIRECTORY)
-        if (!languageDir.exists() || !languageDir.isDirectory) {
-            showErrorPopup("Language layouts directory is missing.")
-            return
-        }
-
+        // Clear existing layouts
         languageLayouts.clear()
-        languageDir.listFiles { _, name -> name.endsWith(".json") }?.sorted()?.forEach { file ->
-            CustomKeyboard.fromJsonFile(this, file) { errorMsg ->
-                failedToLoad = true
-                showErrorPopup(errorMsg) // Handle errors by showing the popup
-                Log.e(TAG, errorMsg)
-            }?.let { keyboard ->
-                languageLayouts.add(keyboard)
-                Log.i(TAG, "Loaded language layout: ${file.name}")
-            }
-        }
+        serviceLayouts.clear()
 
-        if (languageLayouts.isEmpty()) {
-            failedToLoad = true
-            showErrorPopup("No valid language layouts found. Loading fallback layout.")
-            loadFallbackLanguageLayout()
+        // Reload language layouts
+        reloadLayouts(
+            directory = File(Constants.LAYOUTS_LANGUAGE_DIRECTORY),
+            layoutType = "Language",
+            onFileParsed = { keyboard, fileName, isFallback ->
+                languageLayouts.add(Pair(keyboard, isFallback))
+                Log.i(TAG, "Loaded language layout: $fileName (Fallback: $isFallback)")
+            },
+            onFallback = { fileName ->
+                val fallbackLayout = loadFallbackLanguageLayout()
+                languageLayouts.add(Pair(fallbackLayout, true))
+                Log.w(TAG, "Using fallback language layout for: $fileName")
+            }
+        )
+
+        // Reload service layouts
+        reloadLayouts(
+            directory = File(Constants.LAYOUTS_SERVICE_DIRECTORY),
+            layoutType = "Service",
+            onFileParsed = { keyboard, fileName, isFallback ->
+                serviceLayouts[fileName] = Pair(keyboard, isFallback)
+                Log.i(TAG, "Loaded service layout: $fileName (Fallback: $isFallback)")
+            },
+            onFallback = { fileName ->
+                val fallbackLayout = loadFallbackServiceLayout()
+                serviceLayouts[fileName] = Pair(fallbackLayout, true)
+                Log.w(TAG, "Using fallback service layout for: $fileName")
+            }
+        )
+
+        // Log the final counts of loaded layouts
+        Log.i(TAG, "Loaded ${languageLayouts.size} language layouts and ${serviceLayouts.size} service layouts.")
+
+        // Reset to a valid index
+        if (currentLanguageLayoutIndex >= languageLayouts.size) {
+            currentLanguageLayoutIndex = 0
         }
     }
 
-    private fun loadServiceLayouts() {
-        val serviceDir = File(Constants.LAYOUTS_SERVICE_DIRECTORY)
-        if (!serviceDir.exists() || !serviceDir.isDirectory) {
-            showErrorPopup("Service layouts directory is missing.")
+
+    private fun reloadLayouts(
+        directory: File,
+        layoutType: String,
+        onFileParsed: (CustomKeyboard, String, Boolean) -> Unit,
+        onFallback: (String) -> Unit
+    ) {
+        Log.i(TAG, "Checking $layoutType layouts directory: ${directory.absolutePath}")
+
+        if (!directory.exists() || !directory.isDirectory) {
+            val errorMsg = "$layoutType layouts directory does not exist or is not a directory: ${directory.absolutePath}"
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+            onFallback(Constants.LAYOUT_LANGUAGE_DEFAULT.takeIf { layoutType == "Language" }
+                ?: Constants.LAYOUT_SERVICE_DEFAULT)
             return
         }
 
-        serviceLayouts.clear()
-        serviceDir.listFiles { _, name -> name.endsWith(".json") }?.forEach { file ->
-            CustomKeyboard.fromJsonFile(this, file) { errorMsg ->
-                failedToLoad = true
-                showErrorPopup(errorMsg) // Handle errors by showing the popup
-                Log.e(TAG, errorMsg)
-            }?.let { keyboard ->
-                val layoutName = file.nameWithoutExtension
-                serviceLayouts[layoutName] = keyboard
-                Log.i(TAG, "Loaded service layout: $layoutName")
-            }
+        val files = directory.listFiles { _, name -> name.endsWith(".json") } ?: emptyArray()
+        Log.i(TAG, "Found ${files.size} $layoutType layout files in directory.")
+
+        if (files.isEmpty()) {
+            Log.w(TAG, "No $layoutType layouts found. Loading default fallback layout.")
+            onFallback(Constants.LAYOUT_LANGUAGE_DEFAULT.takeIf { layoutType == "Language" }
+                ?: Constants.LAYOUT_SERVICE_DEFAULT)
+            return
         }
 
-        if (serviceLayouts.isEmpty()) {
-            showErrorPopup("No valid service layouts found. Loading fallback layout.")
-            loadFallbackServiceLayout()
+        files.forEach { file ->
+            try {
+                Log.i(TAG, "Attempting to load $layoutType layout: ${file.name}")
+                CustomKeyboard.fromJsonFile(this, file) { error ->
+                    val errorMsg = "Error loading $layoutType layout from file: ${file.name}. Error: $error"
+                    ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+                    onFallback(file.name) // Trigger fallback for this file
+                }?.let { keyboard ->
+                    onFileParsed(keyboard, file.nameWithoutExtension, false)
+                }
+            } catch (e: Exception) {
+                val parseError = "Failed to parse $layoutType layout: ${file.name}. Error: ${e.message}"
+                ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, parseError)
+                onFallback(file.name) // Trigger fallback for this file
+            }
         }
     }
 
 
-    private fun loadFallbackLanguageLayout() {
-        try {
+
+
+    private fun loadFallbackLanguageLayout(): CustomKeyboard {
+        return try {
             val json = resources.openRawResource(R.raw.keyboard_default).bufferedReader().use { it.readText() }
-            CustomKeyboard.fromJson(this, json)?.let {
-                languageLayouts.add(it)
-                Log.i(TAG, "Loaded fallback language layout from resources")
-            } ?: run {
-                val errorMsg = "Failed to parse fallback language layout!\nJSON:\n$json"
-                showErrorPopup(errorMsg)
-            }
+            CustomKeyboard.fromJson(this, json)?.also {
+                Log.i(TAG, "Fallback language layout loaded successfully.")
+            } ?: throw Exception("Parsed fallback language layout is null")
         } catch (e: Exception) {
             val errorMsg = "Error loading fallback language layout: ${e.message}"
-            showErrorPopup(errorMsg)
-            Log.e(TAG, errorMsg, e)
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+            throw e
         }
     }
 
-    private fun loadFallbackServiceLayout() {
-        try {
+    private fun loadFallbackServiceLayout(): CustomKeyboard {
+        return try {
             val json = resources.openRawResource(R.raw.keyboard_service).bufferedReader().use { it.readText() }
-            CustomKeyboard.fromJson(this, json)?.let {
-                serviceLayouts["keyboard-service"] = it
-                Log.i(TAG, "Loaded fallback service layout from resources")
-            } ?: run {
-                val errorMsg = "Failed to parse fallback service layout!\nJSON:\n$json"
-                showErrorPopup(errorMsg)
-            }
+            CustomKeyboard.fromJson(this, json)?.also {
+                Log.i(TAG, "Fallback service layout loaded successfully.")
+            } ?: throw Exception("Parsed fallback service layout is null")
         } catch (e: Exception) {
             val errorMsg = "Error loading fallback service layout: ${e.message}"
-            showErrorPopup(errorMsg)
-            Log.e(TAG, errorMsg, e)
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+            throw e
         }
-    }
-
-    private var errorPopupView: View? = null
-
-    private fun showErrorPopup(message: String) {
-        // Remove existing popup to prevent duplicates
-        errorPopupView?.let {
-            windowManager.removeView(it)
-            errorPopupView = null
-        }
-
-        // Inflate the custom error popup layout
-        val inflater = LayoutInflater.from(this)
-        errorPopupView = inflater.inflate(R.layout.error_notification_view, null).apply {
-            findViewById<TextView>(R.id.error_message).text = message
-
-            // Add click listener to a close button (e.g., ImageView with ID: error_close)
-            findViewById<View>(R.id.error_close).setOnClickListener {
-                dismissErrorPopup()
-            }
-
-            // Optional: Add a click listener anywhere on the popup to dismiss
-            setOnClickListener {
-                dismissErrorPopup()
-            }
-        }
-
-        // Define WindowManager.LayoutParams for positioning
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT, // Full width
-            WindowManager.LayoutParams.WRAP_CONTENT, // Auto height
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, // Overlay permission
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.CENTER or Gravity.CENTER_HORIZONTAL // Position at the center
-            y = 50 // Optional: Add some margin from the top edge
-        }
-
-        try {
-            // Add the error popup to the WindowManager
-            windowManager.addView(errorPopupView, params)
-        } catch (e: Exception) {
-            Log.e("CustomKeyboardService", "Error adding popup view: ${e.message}", e)
-        }
-    }
-
-    // Function to dismiss the error popup manually
-    private fun dismissErrorPopup() {
-        errorPopupView?.let {
-            windowManager.removeView(it)
-            errorPopupView = null
-        }
-    }
-
-
-
-
-    ////////////////////////////////////////////
-    // Ask for permissions
-    private fun checkAndRequestOverlayPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            // Start permission request activity
-            val intent = Intent(this, PermissionRequestActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                putExtra(Constants.EXTRA_PERMISSION_TYPE, Constants.PERMISSION_TYPE_OVERLAY)
-            }
-            startActivity(intent)
-        }
-    }
-
-    private fun checkAndRequestStoragePermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Android 13+ does not require WRITE_EXTERNAL_STORAGE permission
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
-                startPermissionRequestActivity(Constants.PERMISSION_TYPE_STORAGE)
-            }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Android 10+ with scoped storage
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                startPermissionRequestActivity(Constants.PERMISSION_TYPE_STORAGE)
-            }
-        } else {
-            // For Android 9 and below
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                startPermissionRequestActivity(Constants.PERMISSION_TYPE_STORAGE)
-            }
-        }
-    }
-
-    private fun startPermissionRequestActivity(permissionType: String) {
-        val intent = Intent(this, PermissionRequestActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            putExtra(Constants.EXTRA_PERMISSION_TYPE, permissionType)
-        }
-        startActivity(intent)
     }
 
 

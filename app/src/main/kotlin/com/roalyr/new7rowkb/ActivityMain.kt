@@ -27,7 +27,7 @@ import androidx.core.content.FileProvider
 import com.roalyr.new7rowkb.ui.theme.New7rowKBTheme
 import java.io.File
 
-class MainActivity : ComponentActivity() {
+class ActivityMain : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // Force ask for permissions
         sendBroadcast(Intent(Constants.ACTION_CHECK_STORAGE_PERMISSIONS))

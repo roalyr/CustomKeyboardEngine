@@ -4,10 +4,12 @@ import android.os.Environment
 
 class Constants {
     companion object{
+        const val LAYOUT_LANGUAGE_DEFAULT = "keyboard-en-default"
+        const val LAYOUT_SERVICE_DEFAULT = "keyboard-service-default"
+
         // Actions.
         const val ACTION_CHECK_OVERLAY_PERMISSION = "com.roalyr.new7rowkb.CHECK_OVERLAY_PERMISSION"
         const val ACTION_CHECK_STORAGE_PERMISSIONS = "com.roalyr.new7rowkb.CHECK_STORAGE_PERMISSIONS"
-        const val ACTION_MANAGE_OVERLAY_PERMISSION = "android.settings.action.MANAGE_OVERLAY_PERMISSION"
         //Permissions.
         const val EXTRA_PERMISSION_TYPE = "EXTRA_PERMISSION_TYPE"
         const val PERMISSION_TYPE_OVERLAY = "PERMISSION_TYPE_OVERLAY"
@@ -52,6 +54,6 @@ class Constants {
 
         // Correct path for service layouts
         val LAYOUTS_SERVICE_DIRECTORY: String
-            get() = "$APP_DIRECTORY/layouts/service-layouts"
+            get() = "$APP_DIRECTORY/layouts/layouts-service"
     }
 }

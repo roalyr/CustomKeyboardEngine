@@ -126,6 +126,7 @@ class CustomKeyboard(
     }
 
     companion object {
+        private const val TAG = "CustomKeyboard"
         fun fromJson(context: Context, json: String): CustomKeyboard {
             val layout = Json { coerceInputValues = true }.decodeFromString<KeyboardLayout>(json)
             return CustomKeyboard(context, layout)
@@ -138,11 +139,10 @@ class CustomKeyboard(
         ): CustomKeyboard? {
             return try {
                 val content = file.readText()
-                Log.i("CustomKeyboard", "Attempting to parse file: ${file.name}")
+                Log.i(TAG, "Attempting to parse file: ${file.name}")
                 fromJson(context, content)
             } catch (e: Exception) {
-                val errorMessage = "Error parsing file ${file.name}: ${e.message}"
-                Log.e("CustomKeyboard", errorMessage, e)
+                val errorMessage = "$TAG: Error parsing file ${file.name}: ${e.message}"
                 onError(errorMessage) // Trigger the error callback
                 null
             }

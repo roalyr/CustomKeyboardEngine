@@ -30,7 +30,6 @@ data class Key(
     val keyCodeLongPress: Int? = null,
     val isRepeatable: Boolean = false,
     val isModifier: Boolean = false,
-    val isSticky: Boolean = false,
     var label: String? = null,
     val smallLabel: String? = null,
     val icon: String? = null,

@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "New7rowKB"
+rootProject.name = "CustomKeyboardEngine"
 include(":app")
  

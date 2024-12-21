@@ -1,4 +1,4 @@
-package com.roalyr.new7rowkb
+package com.roalyr.customkeyboardengine
 
 
 import android.content.Intent
@@ -24,7 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import com.roalyr.new7rowkb.ui.theme.New7rowKBTheme
+import com.roalyr.customkeyboardengine.ui.theme.New7rowKBTheme
 import java.io.File
 
 class ActivityMain : ComponentActivity() {
@@ -67,8 +67,8 @@ class ActivityMain : ComponentActivity() {
                             Text("Open Keyboard Layouts Directory")
                         }
                         Spacer(modifier = Modifier.height(32.dp))
-                        Button(onClick = { openUrl("https://github.com/roalyr/New7rowKB") }) {
-                            Text("Visit GitHub Project")
+                        Button(onClick = { openUrl("https://github.com/roalyr/CustomKeyboardEngine") }) {
+                            Text("Visit GitHub Page")
                         }
                     }
                 }

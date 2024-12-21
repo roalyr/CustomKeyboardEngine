@@ -1,6 +1,6 @@
-# CustomKeyboard Engine
+# CustomKeyboardEngine
 
-CustomKeyboard is a flexible and customizable keyboard engine for Android.
+CustomKeyboardEngine is a flexible and customizable keyboard engine for Android.
 
 ![img_main.png](doc/img_main.png)
 
@@ -40,16 +40,14 @@ CustomKeyboard is a flexible and customizable keyboard engine for Android.
 ---
 
 ## Folder Structure
-(TODO: rename app and folder eventually)
-
 ```
-New7rowKB/
+Andorid/media/com.roalyr.customkeyboardengine
 ├── layouts/
-│   ├── language-layouts/       # Language-specific layouts
+│   ├── layouts-language/       # Language-specific layouts
 │   │   ├── keyboard-default.json
 │   │   ├── keyboard-default-ua.json
 │   │   └── ... (other layouts)
-│   ├── service-layouts/        # Service-specific layouts
+│   ├── layouts-service/        # Service-specific layouts
 │   │   ├── keyboard-service.json
 └── ...
 ```
@@ -137,8 +135,8 @@ For all other standard keycodes, refer to [Android KeyEvent Documentation](https
 
 Layouts are dynamically reloaded when changes are detected in the layout folders. This is done using file timestamps:
 
-1. **Language Layouts** are loaded from `language-layouts/`.
-2. **Service Layouts** are loaded from `service-layouts/`.
+1. **Language Layouts** are loaded from `layouts-language/`.
+2. **Service Layouts** are loaded from `layouts-service/`.
 
 If a layout file is updated or a new file is added, the keyboard will reload automatically on the next input method initialization.
 
@@ -148,8 +146,8 @@ If a layout file is updated or a new file is added, the keyboard will reload aut
 
 Upon every launch, the app copies default layouts into the following folders if they are missing:
 
-- `language-layouts/keyboard-default.json`
-- `service-layouts/keyboard-service.json`
+- `layouts-language/keyboard-default.json`
+- `layouts-service/keyboard-service.json`
 
 If these files are missing or corrupted, fallback layouts are loaded from built-in resources.
 You can use those layouts as templates by saving them under different names.
@@ -158,7 +156,7 @@ You can use those layouts as templates by saving them under different names.
 
 ## How to Use
 
-1. **Place Layout Files**: Add your JSON files to `language-layouts/` or `service-layouts/`. (TODO: implement custom keycodes for service keyboards).
+1. **Place Layout Files**: Add your JSON files to `layouts-language/` or `layouts-service`. (TODO: implement custom keycodes for service keyboards).
 2. **Edit Layouts**: Customize keys, dimensions, and behaviors in the JSON files.
 3. **Restart Keyboard**: The keyboard detects changes and reloads layouts dynamically.
 4. **Switch Layouts**: Use the `KEYCODE_CYCLE_LANGUAGE_LAYOUT` key to cycle through language layouts.

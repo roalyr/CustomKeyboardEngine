@@ -1,4 +1,4 @@
-package com.roalyr.new7rowkb.ui.theme
+package com.roalyr.customkeyboardengine.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

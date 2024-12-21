@@ -4,15 +4,15 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 android {
-    namespace = "com.roalyr.new7rowkb"
+    namespace = "com.roalyr.customkeyboardengine"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.roalyr.new7rowkb"
+        applicationId = "com.roalyr.customkeyboardengine"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
-        versionName = "1.1"
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

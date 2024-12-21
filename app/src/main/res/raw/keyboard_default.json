@@ -107,21 +107,18 @@
         {
           "label": "shf",
           "keyCode": 59,
-          "isSticky": true,
           "keyWidth": 12,
           "isModifier": true
         },
         {
           "label": "ctl",
           "keyCode": 113,
-          "isSticky": true,
           "keyWidth": 12,
           "isModifier": true
         },
         {
           "label": "alt",
           "keyCode": 57,
-          "isSticky": true,
           "keyWidth": 12,
           "isModifier": true
         },
@@ -167,7 +164,6 @@
         {
           "label": "cap",
           "keyCode": 115,
-          "isSticky": true,
           "keyWidth": 12,
           "isModifier": true
         },

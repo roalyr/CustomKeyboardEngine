@@ -1,4 +1,4 @@
-package com.roalyr.new7rowkb
+package com.roalyr.customkeyboardengine
 
 import org.junit.Test
 

@@ -8,7 +8,7 @@
     android:focusable="false"
     >
 
-    <com.roalyr.new7rowkb.CustomKeyboardView xmlns:app="http://schemas.android.com/apk/res-auto"
+    <com.roalyr.customkeyboardengine.CustomKeyboardView xmlns:app="http://schemas.android.com/apk/res-auto"
         android:id="@+id/keyboard_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -20,7 +20,7 @@
         app:keySmallTextColor="@color/key_small_text_color"
         />
 
-    <com.roalyr.new7rowkb.CustomKeyboardView xmlns:app="http://schemas.android.com/apk/res-auto"
+    <com.roalyr.customkeyboardengine.CustomKeyboardView xmlns:app="http://schemas.android.com/apk/res-auto"
         android:id="@+id/service_keyboard_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -1,4 +1,4 @@
-package com.roalyr.new7rowkb
+package com.roalyr.customkeyboardengine
 
 import android.os.Environment
 
@@ -35,7 +35,7 @@ class Constants {
         const val DEFAULT_KEY_GAP = 1f
 
         // Paths
-        const val APP_MEDIA_NAME = "com.roalyr.new7rowkb"
+        const val APP_MEDIA_NAME = "com.roalyr.customkeyboardengine"
         private const val LAYOUTS_DIRECTORY_NAME = "layouts"
         private const val LAYOUTS_LANGUAGE_NAME = "layouts-language"
         private const val LAYOUTS_SERVICE_NAME = "layouts-service"
@@ -53,8 +53,8 @@ class Constants {
     }
 
     object Actions {
-        const val CHECK_OVERLAY_PERMISSION = "com.roalyr.new7rowkb.CHECK_OVERLAY_PERMISSION"
-        const val CHECK_STORAGE_PERMISSIONS = "com.roalyr.new7rowkb.CHECK_STORAGE_PERMISSIONS"
+        const val CHECK_OVERLAY_PERMISSION = "com.roalyr.customkeyboardengine.CHECK_OVERLAY_PERMISSION"
+        const val CHECK_STORAGE_PERMISSIONS = "com.roalyr.customkeyboardengine.CHECK_STORAGE_PERMISSIONS"
     }
 
     object PermissionTypes {

@@ -1,4 +1,4 @@
-package com.roalyr.new7rowkb.ui.theme
+package com.roalyr.customkeyboardengine.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

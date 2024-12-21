@@ -19,22 +19,8 @@ CustomKeyboardEngine is a flexible and customizable keyboard engine for Android.
 
 ## Screenshots
 
-### Pressing Ctrl+B in Blender. All generic meta + key combinations work.
-![screen_blender.png](doc/screen_blender.png)
+![screen_combined_landscape.png](doc/screen_combined_landscape.png)
 
----
-
-### Floating keyboard mode with adjustable position, size and visibility.
-![screen_floating.png](doc/screen_floating.png)
-
----
-
-### You can edit .json layouts on the go.
-![screen_layout.png](doc/screen_layout.png)
-
----
-
-### Floating layout in landscape mode in Godot (the reason this app was made).
 ![screen_floating_landscape.png](doc/screen_floating_landscape.png)
 
 ---

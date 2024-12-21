@@ -162,6 +162,7 @@ class CustomKeyboardService : InputMethodService() {
             try {
                 windowManager.addView(view, params)
                 isFloatingKeyboardOpen = true
+                view.post { floatingKeyboardHeight = view.measuredHeight }
             } catch (e: Exception) {
                 val errorMsg = "Failed to add floating keyboard view: ${e.message}"
                 ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
@@ -387,18 +388,30 @@ class CustomKeyboardService : InputMethodService() {
 
     private fun translateVertFloatingKeyboard(yOffset: Int) {
         if (isFloatingKeyboardOpen) {
+            Log.i(TAG, "translateVertFloatingKeyboard called with yOffset: $yOffset")
+
             floatingKeyboardPosY += yOffset
+            Log.i(TAG, "Updated floatingKeyboardPosY: $floatingKeyboardPosY")
+            Log.i(TAG, "Updated floatingKeyboardHEIGH: $floatingKeyboardHeight")
+
 
             val density = resources.displayMetrics.density
             val bottomOffsetPx = (Constants.KEYBOARD_TRANSLATION_BOTTOM_OFFSET * density).toInt()
+            Log.i(TAG, "Calculated bottomOffsetPx: $bottomOffsetPx")
 
-            val coerceTop = (-(screenHeight / 2.0 - floatingKeyboardHeight / 2.0)).toInt()
-            val coerceBottom = (screenHeight / 2.0 - bottomOffsetPx - floatingKeyboardHeight / 2.0).toInt()
+            val coerceTop = (-(getScreenHeight() / 2.0 - floatingKeyboardHeight / 2.0)).toInt()
+            val coerceBottom = (getScreenHeight() / 2.0 - bottomOffsetPx - floatingKeyboardHeight / 2.0).toInt()
+            Log.i(TAG, "Coerce limits - Top: $coerceTop, Bottom: $coerceBottom")
 
             floatingKeyboardPosY = floatingKeyboardPosY.coerceIn(coerceTop, coerceBottom)
+            Log.i(TAG, "Coerced floatingKeyboardPosY: $floatingKeyboardPosY")
+
             updateFloatingKeyboard()
+        } else {
+            Log.w(TAG, "translateVertFloatingKeyboard called but floating keyboard is not open.")
         }
     }
+
 
     private fun getScreenWidth(): Int {
         val displayMetrics = DisplayMetrics()

@@ -35,10 +35,13 @@ class Constants {
         const val DEFAULT_KEY_GAP = 1f
 
         // Paths
-        private const val APP_MEDIA_NAME = "com.roalyr.new7rowkb"
+        const val APP_MEDIA_NAME = "com.roalyr.new7rowkb"
         private const val LAYOUTS_DIRECTORY_NAME = "layouts"
         private const val LAYOUTS_LANGUAGE_NAME = "layouts-language"
         private const val LAYOUTS_SERVICE_NAME = "layouts-service"
+
+        val MEDIA_DIRECTORY: String
+            get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).parent}/Android/media/$APP_MEDIA_NAME"
 
         val MEDIA_LAYOUTS_LANGUAGE_DIRECTORY: String
             get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).parent}/Android/media/$APP_MEDIA_NAME/$LAYOUTS_DIRECTORY_NAME/$LAYOUTS_LANGUAGE_NAME"

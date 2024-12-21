@@ -4,13 +4,13 @@ package com.roalyr.new7rowkb
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +28,15 @@ import com.roalyr.new7rowkb.ui.theme.New7rowKBTheme
 import java.io.File
 
 class ActivityMain : ComponentActivity() {
+    // Register the overlay permission launcher
+    private val overlayPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (Settings.canDrawOverlays(this)) {
+                Log.i("ActivityMain", "Overlay permission granted")
+            } else {
+                Toast.makeText(this, "Overlay permission denied", Toast.LENGTH_SHORT).show()
+            }
+        }
     override fun onCreate(savedInstanceState: Bundle?) {
         // Force ask for permissions
         sendBroadcast(Intent(Constants.Actions.CHECK_STORAGE_PERMISSIONS))
@@ -55,7 +64,7 @@ class ActivityMain : ComponentActivity() {
                         Spacer(modifier = Modifier.height(32.dp))
 
                         Button(onClick = { openKeyboardLayoutsDirectory() }) {
-                            Text("TODO:Open Keyboard Layouts Directory")
+                            Text("Open Keyboard Layouts Directory")
                         }
                         Spacer(modifier = Modifier.height(32.dp))
                         Button(onClick = { openUrl("https://github.com/roalyr/New7rowKB") }) {
@@ -65,69 +74,81 @@ class ActivityMain : ComponentActivity() {
                 }
             }
         }
+        // Ensure media directories exist
+        ensureMediaDirectories()
+
+        // Request permissions
+        //requestPermissions()
+
     }
 
     private fun requestPermissions() {
         // Check and request storage permissions dynamically
-        ActivityPermissionRequest.checkAndRequestStoragePermissions(this)
-
-        // Check for SAF access (if required for your app)
-        val persistedUri = ActivityPermissionRequest.getPersistedSafUri(this)
-        if (persistedUri == null) {
-            // SAF URI not saved, request SAF permission
-            ActivityPermissionRequest.requestDocumentTreeAccess(this)
+        if (ActivityPermissionRequest.checkAndRequestStoragePermissions(this)) {
+            Toast.makeText(this, "Storage permissions already granted.", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Requesting storage permissions.", Toast.LENGTH_SHORT).show()
         }
 
         // Check and request overlay permission
-        ActivityPermissionRequest.checkAndRequestOverlayPermission(this)
+        if (ActivityPermissionRequest.checkAndRequestOverlayPermission(this)) {
+            Toast.makeText(this, "Overlay permission already granted.", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Requesting overlay permission.", Toast.LENGTH_SHORT).show()
+        }
     }
 
 
+    private fun ensureMediaDirectories() {
+        try {
+            ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(
+                windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager,
+                context = this,
+                resources = resources
+            )
+            Log.i("ActivityMain", "Media directories ensured successfully.")
+        } catch (e: Exception) {
+            Log.e("ActivityMain", "Error ensuring media directories: ${e.message}")
+            Toast.makeText(this, "Error initializing media directories.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun openKeyboardLayoutsDirectory() {
-        val appDir = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
-            "New7rowKB"
-        )
+        val appDir = File(Constants.MEDIA_LAYOUTS_LANGUAGE_DIRECTORY)
 
         // Ensure the directory exists
-        if (!appDir.exists()) {
-            if (!appDir.mkdirs()) {
-                Toast.makeText(this, "Failed to create directory", Toast.LENGTH_SHORT).show()
-                Log.e("MainActivity", "Failed to create New7rowKB directory")
-                return
-            }
+        if (!appDir.exists() && !appDir.mkdirs()) {
+            Toast.makeText(this, "Failed to create directory", Toast.LENGTH_SHORT).show()
+            Log.e("ActivityMain", "Failed to create directory: ${appDir.absolutePath}")
+            return
         }
 
         try {
-            // Use FileProvider to generate content URI
+            // Use FileProvider to create a URI
             val uri = FileProvider.getUriForFile(
                 this,
                 "${applicationContext.packageName}.provider",
                 appDir
             )
-            Log.d("MainActivity", "Generated URI: $uri")
 
+            // Create an intent with ACTION_VIEW and use */* MIME
             val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "*/*") // Use */* to let file manager decide
+                setDataAndType(uri, "*/*") // Fallback for directory opening
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
             }
 
-            // Verify if there's an app to handle the intent
+            // Verify if an app can handle the intent
             if (intent.resolveActivity(packageManager) != null) {
                 startActivity(intent)
             } else {
                 Toast.makeText(this, "No file manager found to open the directory", Toast.LENGTH_SHORT).show()
-                Log.e("MainActivity", "No file manager found to handle ACTION_VIEW")
+                Log.e("ActivityMain", "No app found to handle ACTION_VIEW for this directory")
             }
         } catch (e: Exception) {
-            Log.e("MainActivity", "Failed to open directory: ${e.message}")
+            Log.e("ActivityMain", "Failed to open directory: ${e.message}")
             Toast.makeText(this, "Failed to open directory.", Toast.LENGTH_SHORT).show()
         }
     }
-
-
-
-
 
 
 

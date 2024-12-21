@@ -116,16 +116,16 @@ Custom keycodes are used to trigger special actions. These are defined in the `C
 | `KEYCODE_CLOSE_FLOATING_KEYBOARD` | -10  | Closes the floating keyboard.                             |
 | `KEYCODE_OPEN_FLOATING_KEYBOARD`  | -11  | Opens the floating keyboard.                              |
 | `KEYCODE_SWITCH_KEYBOARD_MODE`    | -12  | Switches the keyboard mode.                               |
-| `KEYCODE_ENLARGE_FLOATING_KEYBOARD` | -13 | Enlarges the floating keyboard horizontally.              |
-| `KEYCODE_SHRINK_FLOATING_KEYBOARD`  | -14 | Shrinks the floating keyboard horizontally.               |
-| `KEYCODE_ENLARGE_FLOATING_KEYBOARD_VERT` | -15 | Enlarges the floating keyboard vertically. (TODO)         |
-| `KEYCODE_SHRINK_FLOATING_KEYBOARD_VERT`  | -16 | Shrinks the floating keyboard vertically. (TODO)          |
-| `KEYCODE_MOVE_FLOATING_KEYBOARD_LEFT`    | -17 | Moves the floating keyboard to the left.                  |
-| `KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT`   | -18 | Moves the floating keyboard to the right.                 |
-| `KEYCODE_MOVE_FLOATING_KEYBOARD_UP`      | -19 | Moves the floating keyboard upward.                       |
-| `KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN`    | -20 | Moves the floating keyboard downward.                     |
-| `KEYCODE_CYCLE_LANGUAGE_LAYOUT`          | -21 | Cycles through available language layouts.                |
-| `NOT_A_KEY`                              | -1   | Placeholder for invalid/no key.                           |
+| `KEYCODE_ENLARGE_FLOATING_KEYBOARD` | -13 | Enlarges the floating keyboard horizontally.             |
+| `KEYCODE_SHRINK_FLOATING_KEYBOARD`  | -14 | Shrinks the floating keyboard horizontally.              |
+| `KEYCODE_ENLARGE_FLOATING_KEYBOARD_VERT` | -15 | Enlarges the floating keyboard vertically. (TODO)   |
+| `KEYCODE_SHRINK_FLOATING_KEYBOARD_VERT`  | -16 | Shrinks the floating keyboard vertically. (TODO)    |
+| `KEYCODE_MOVE_FLOATING_KEYBOARD_LEFT`    | -17 | Moves the floating keyboard to the left.            |
+| `KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT`   | -18 | Moves the floating keyboard to the right.           |
+| `KEYCODE_MOVE_FLOATING_KEYBOARD_UP`      | -19 | Moves the floating keyboard upward.                 |
+| `KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN`    | -20 | Moves the floating keyboard downward.               |
+| `KEYCODE_CYCLE_LANGUAGE_LAYOUT`          | -21 | Cycles through available language layouts.          |
+| `KEYCODE_IGNORE`                         | -1   | Placeholder.                                       |
 
 For all other standard keycodes, refer to [Android KeyEvent Documentation](https://developer.android.com/reference/android/view/KeyEvent).
 
@@ -133,12 +133,10 @@ For all other standard keycodes, refer to [Android KeyEvent Documentation](https
 
 ## Layout Dynamic Reset
 
-Layouts are dynamically reloaded when changes are detected in the layout folders. This is done using file timestamps:
+Layouts are dynamically reloaded when initiating an input view or cycling layouts:
 
 1. **Language Layouts** are loaded from `layouts-language/`.
 2. **Service Layouts** are loaded from `layouts-service/`.
-
-If a layout file is updated or a new file is added, the keyboard will reload automatically on the next input method initialization.
 
 ---
 
@@ -156,7 +154,7 @@ You can use those layouts as templates by saving them under different names.
 
 ## How to Use
 
-1. **Place Layout Files**: Add your JSON files to `layouts-language/` or `layouts-service`. (TODO: implement custom keycodes for service keyboards).
+1. **Place Layout Files**: Add your JSON files to `layouts-language/` or `layouts-service/`. (TODO: implement custom keycodes for service keyboards).
 2. **Edit Layouts**: Customize keys, dimensions, and behaviors in the JSON files.
 3. **Restart Keyboard**: The keyboard detects changes and reloads layouts dynamically.
 4. **Switch Layouts**: Use the `KEYCODE_CYCLE_LANGUAGE_LAYOUT` key to cycle through language layouts.
@@ -166,16 +164,17 @@ You can use those layouts as templates by saving them under different names.
 ## Notes
 
 - Modifier keys (Shift, Ctrl, Alt) automatically update key labels to reflect their state.
-- Sticky keys (e.g., Caps Lock) toggle their state on press.
-- Long-press actions can be defined using `keyCodeLongPress` (TODO: still under development) or `smallLabel`.
-- The **Space Key** and similar keys can extend into adjacent rows using custom heights.
+- Caps Lock toggles its state on press.
+- Long-press actions can be defined using `keyCodeLongPress` or `smallLabel`.
+- Keys can extend into adjacent rows using custom heights (like a space key in default layout).
 
 ---
 
 ## Debugging
 
 - Parsing errors are displayed as **error popups** on the screen with details.
-- Logs provide information about successfully loaded layouts, file changes, and errors.
+- Every error is also mirrored via `Log.e()` call.
+- `Log.i()`, `Log.d()` are (should be) suppressed, leaving no trace of app activity.
 
 ---
 

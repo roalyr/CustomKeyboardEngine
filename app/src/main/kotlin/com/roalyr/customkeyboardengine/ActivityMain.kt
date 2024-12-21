@@ -24,7 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import com.roalyr.customkeyboardengine.ui.theme.New7rowKBTheme
+import com.roalyr.customkeyboardengine.ui.theme.CustomKeyboardEngineTheme
 import java.io.File
 
 class ActivityMain : ComponentActivity() {
@@ -45,7 +45,7 @@ class ActivityMain : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            New7rowKBTheme {
+            CustomKeyboardEngineTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Column(
                         modifier = Modifier

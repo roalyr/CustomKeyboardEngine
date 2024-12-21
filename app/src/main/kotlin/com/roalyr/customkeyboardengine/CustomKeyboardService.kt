@@ -44,6 +44,9 @@ class CustomKeyboardService : InputMethodService() {
     private var isAltPressed = false
     private var isCapsPressed = false
 
+    private var metaState = 0 // Combined meta state
+    private var modifiedMetaState = 0 // Modified meta state for handling caps lock
+
 
     companion object {
         private const val TAG = "CustomKeyboardService"
@@ -102,7 +105,7 @@ class CustomKeyboardService : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         if (!restarting){
-            Log.i(TAG, "Starting input view. Reloading layouts.")
+            //Log.i(TAG, "Starting input view. Reloading layouts.")
             reloadKeyboardLayouts()
             recreateKeyboards()
         } else {
@@ -110,7 +113,6 @@ class CustomKeyboardService : InputMethodService() {
         }
         super.onStartInputView(info, restarting)
     }
-
 
     ////////////////////////////////////////////
     // Handle window creation and inflation
@@ -173,14 +175,12 @@ class CustomKeyboardService : InputMethodService() {
         }
     }
 
-
     private fun createServiceKeyboard(): View? {
         val rootView = inputView ?: run {
             val errorMsg = "Input view is null"
             ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
             return null
         }
-
         serviceKeyboardView = rootView.findViewById(R.id.service_keyboard_view) as? CustomKeyboardView
         serviceKeyboardView?.let { view ->
             // TODO: Load a service keyboard according to settings, For now - only the one with default name.
@@ -189,7 +189,6 @@ class CustomKeyboardService : InputMethodService() {
                 val (customKeyboard, isFallback) = customKeyboardPair
                 view.setKeyboard(customKeyboard)
                 setKeyboardActionListener(view)
-
                 if (isFallback) {
                     val errorMsg = "Using fallback service layout $Constants.LAYOUT_SERVICE_DEFAULT."
                     ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
@@ -205,14 +204,12 @@ class CustomKeyboardService : InputMethodService() {
         return rootView
     }
 
-
     private fun createStandardKeyboard(): View? {
         val rootView = inputView ?: run {
             val errorMsg = "Input view is null."
             ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
             return null
         }
-
         keyboardView = rootView.findViewById(R.id.keyboard_view) as? CustomKeyboardView
         keyboardView?.let { view ->
             val (customKeyboard, isFallback) = languageLayouts.getOrNull(currentLanguageLayoutIndex)
@@ -221,15 +218,12 @@ class CustomKeyboardService : InputMethodService() {
                     ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
                     return rootView
                 }
-
             view.setKeyboard(customKeyboard)
             setKeyboardActionListener(view)
-
             if (isFallback) {
                 val errorMsg = "Using fallback language layout at index: $currentLanguageLayoutIndex"
                 ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
             }
-
             return rootView
         } ?: run {
             val errorMsg = "Keyboard view is null."
@@ -238,25 +232,21 @@ class CustomKeyboardService : InputMethodService() {
         return null
     }
 
-
-
-
     ////////////////////////////////////////////
     // Unified method for keyboard switching
     private fun cycleLanguageLayout() {
         currentLanguageLayoutIndex = (currentLanguageLayoutIndex + 1) % languageLayouts.size
-        Log.i(TAG, "Cycled to language layout index: $currentLanguageLayoutIndex")
+        //Log.i(TAG, "Cycled to language layout index: $currentLanguageLayoutIndex")
         reloadKeyboardLayouts() // Always reload to reflect changes
         recreateKeyboards()
     }
 
     private fun switchKeyboardMode() {
         isFloatingKeyboard = !isFloatingKeyboard
-        Log.i(TAG, "Switched keyboard mode to ${if (isFloatingKeyboard) "Floating" else "Standard"}.")
+        //Log.i(TAG, "Switched keyboard mode to ${if (isFloatingKeyboard) "Floating" else "Standard"}.")
         reloadKeyboardLayouts() // Reload and apply the updated mode
         recreateKeyboards()
     }
-
 
     private fun recreateKeyboards(){
         closeAllKeyboards()
@@ -287,10 +277,8 @@ class CustomKeyboardService : InputMethodService() {
             val errorMsg = "Error creating new input view"
             ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
         }
-
         invalidateAllKeysOnAllKeyboards()
     }
-
 
 
     ////////////////////////////////////////////
@@ -388,27 +376,26 @@ class CustomKeyboardService : InputMethodService() {
 
     private fun translateVertFloatingKeyboard(yOffset: Int) {
         if (isFloatingKeyboardOpen) {
-            Log.i(TAG, "translateVertFloatingKeyboard called with yOffset: $yOffset")
+            //Log.i(TAG, "translateVertFloatingKeyboard called with yOffset: $yOffset")
 
             floatingKeyboardPosY += yOffset
-            Log.i(TAG, "Updated floatingKeyboardPosY: $floatingKeyboardPosY")
-            Log.i(TAG, "Updated floatingKeyboardHEIGH: $floatingKeyboardHeight")
-
+            //Log.i(TAG, "Updated floatingKeyboardPosY: $floatingKeyboardPosY")
+            //Log.i(TAG, "Updated floatingKeyboardHEIGH: $floatingKeyboardHeight")
 
             val density = resources.displayMetrics.density
             val bottomOffsetPx = (Constants.KEYBOARD_TRANSLATION_BOTTOM_OFFSET * density).toInt()
-            Log.i(TAG, "Calculated bottomOffsetPx: $bottomOffsetPx")
+            //Log.i(TAG, "Calculated bottomOffsetPx: $bottomOffsetPx")
 
             val coerceTop = (-(getScreenHeight() / 2.0 - floatingKeyboardHeight / 2.0)).toInt()
             val coerceBottom = (getScreenHeight() / 2.0 - bottomOffsetPx - floatingKeyboardHeight / 2.0).toInt()
-            Log.i(TAG, "Coerce limits - Top: $coerceTop, Bottom: $coerceBottom")
+            //Log.i(TAG, "Coerce limits - Top: $coerceTop, Bottom: $coerceBottom")
 
             floatingKeyboardPosY = floatingKeyboardPosY.coerceIn(coerceTop, coerceBottom)
-            Log.i(TAG, "Coerced floatingKeyboardPosY: $floatingKeyboardPosY")
+            //Log.i(TAG, "Coerced floatingKeyboardPosY: $floatingKeyboardPosY")
 
             updateFloatingKeyboard()
         } else {
-            Log.w(TAG, "translateVertFloatingKeyboard called but floating keyboard is not open.")
+            //Log.w(TAG, "translateVertFloatingKeyboard called but floating keyboard is not open.")
         }
     }
 
@@ -432,19 +419,11 @@ class CustomKeyboardService : InputMethodService() {
     private fun setKeyboardActionListener(keyboardView: CustomKeyboardView) {
         keyboardView.setOnKeyboardActionListener(object : CustomKeyboardView.OnKeyboardActionListener {
 
-            private var metaState = 0 // Combined meta state
-            private var modifiedMetaState = 0 // Modified meta state for handling caps lock
-
-            override fun onKey(primaryCode: Int, label: CharSequence?) {
-                if (keyboardView.isLongPressing()) {
-                    //Long press detected, suppressing key handling
-                    return
+            override fun onKey(code: Int?, label: CharSequence?) {
+                if (code != null){
+                    handleCustomKey(code)
                 }
-
-                // Handle custom keycodes. If key codes do not match - it will be skipped.
-                handleCustomKey(primaryCode, label)
-
-                when (primaryCode) {
+                when (code) {
                     KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> {
                         metaState = toggleMetaState(metaState, KeyEvent.META_SHIFT_ON)
                         isShiftPressed = !isShiftPressed
@@ -470,61 +449,51 @@ class CustomKeyboardService : InputMethodService() {
                         } else {
                             metaState
                         }
-                        handleKey(primaryCode, label, modifiedMetaState)
+                        handleKey(code, label)
                         resetMetaStates()
                         keyboardView.updateMetaState(isShiftPressed, isCtrlPressed, isAltPressed, isCapsPressed)
                     }
                 }
             }
-
-            override fun onText(text: CharSequence) {
-                val processedText = if (isShiftPressed || isCapsPressed) {
-                    resetMetaStates()
-                    keyboardView.updateMetaState(isShiftPressed, isCtrlPressed, isAltPressed, isCapsPressed)
-                    text.toString().uppercase()
-                } else {
-                    text.toString()
-                }
-                currentInputConnection.commitText(processedText, 1)
-            }
-
-
-            override fun onRelease(codes: Int) {
-            }
-
-            private fun toggleMetaState(metaState: Int, metaFlag: Int): Int {
-                return metaState xor metaFlag // XOR toggles the state
-            }
-
-            private fun resetMetaStates() {
-                // Store those values in service class.
-                metaState = 0
-                isShiftPressed = false
-                isCtrlPressed = false
-                isAltPressed = false
-            }
         })
     }
 
+    private fun toggleMetaState(metaState: Int, metaFlag: Int): Int {
+        return metaState xor metaFlag // XOR toggles the state
+    }
+
+    private fun resetMetaStates() {
+        // Store those values in service class.
+        metaState = 0
+        isShiftPressed = false
+        isCtrlPressed = false
+        isAltPressed = false
+    }
 
     ////////////////////////////////////////////
     // Handle key events
-    private fun handleKey(primaryCode: Int, label: CharSequence?,modifiedMetaState: Int) {
+    private fun handleKey(code: Int?, label: CharSequence?) {
+        //Log.d("Inject", "$code, $label, $modifiedMetaState")
 
         // Manually apply metaState to the key event if key code is written in layout.
-        if (primaryCode != Constants.NOT_A_KEY) {
-            injectKeyEvent(primaryCode, modifiedMetaState)
+        if (code != null) {
+            injectKeyEvent(code, modifiedMetaState)
         } else {
             // If no key codes for a key - attempt to get key code from label.
             if (label != null) { // Check if label is not null
                 val keyLabel = label.toString()
-                val keyCode = getKeycodeFromLabel(keyLabel)
+                //Log.d("Inject", "$keyLabel, $modifiedMetaState")
 
-                if (keyCode != null) {
-                    injectKeyEvent(keyCode, modifiedMetaState)
+                val codeFromLabel = getKeycodeFromLabel(keyLabel)
+
+                if (codeFromLabel != null) {
+                    //Log.d("Inject", "$codeFromLabel, $modifiedMetaState")
+                    injectKeyEvent(codeFromLabel, modifiedMetaState)
                 } else {
                     // If no key code found, commit label as text "as is".
                     val finalKeyLabel = if (isShiftPressed || isCapsPressed) {
+                        resetMetaStates()
+                        keyboardView?.updateMetaState(isShiftPressed, isCtrlPressed, isAltPressed, isCapsPressed)
                         keyLabel.uppercase()
                     } else {
                         keyLabel.lowercase()
@@ -537,10 +506,11 @@ class CustomKeyboardService : InputMethodService() {
         }
     }
 
-    private fun handleCustomKey(primaryCode: Int, label: CharSequence?)  {
+    private fun handleCustomKey(code: Int?)  {
         // Handle custom key codes related to this application.
-        if (primaryCode != Constants.NOT_A_KEY) {
-            when (primaryCode) {
+        // Code is mandatory
+        if (code != null && code != Constants.KEYCODE_IGNORE) {
+            when (code) {
 
                 Constants.KEYCODE_CLOSE_FLOATING_KEYBOARD -> {
                     if (isFloatingKeyboardOpen) {
@@ -576,9 +546,6 @@ class CustomKeyboardService : InputMethodService() {
     }
 
 
-
-
-
     ////////////////////////////////////////////
     // Event injections
     private fun injectMetaModifierKeys(metaState: Int, action: Int) {
@@ -597,11 +564,9 @@ class CustomKeyboardService : InputMethodService() {
     private fun injectKeyEvent(keyCode: Int, metaState: Int) {
         // Inject meta modifier keys down
         injectMetaModifierKeys(metaState, KeyEvent.ACTION_DOWN)
-
         // Inject the main key event
         injectKeyEventInternal(KeyEvent.ACTION_DOWN, keyCode, metaState)
         injectKeyEventInternal(KeyEvent.ACTION_UP, keyCode, metaState)
-
         // Inject meta modifier keys up
         injectMetaModifierKeys(metaState, KeyEvent.ACTION_UP)
     }
@@ -668,31 +633,7 @@ class CustomKeyboardService : InputMethodService() {
             "]" to KeyEvent.KEYCODE_RIGHT_BRACKET,
             "-" to KeyEvent.KEYCODE_MINUS,
             "=" to KeyEvent.KEYCODE_EQUALS,
-
-            // Additional Symbols and Characters
-            "!" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_1,
-            "@" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_2,
-            "#" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_3,
-            "$" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_4,
-            "%" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_5,
-            "^" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_6,
-            "&" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_7,
-            "*" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_8,
-            "(" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_9,
-            ")" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_0,
-            "_" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_MINUS,
-            "+" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_EQUALS,
-            ":" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_SEMICOLON,
-            "\"" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_APOSTROPHE,
-            "<" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_COMMA,
-            ">" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_PERIOD,
-            "?" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_SLASH,
-            "|" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_BACKSLASH,
-            "{" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_LEFT_BRACKET,
-            "}" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_RIGHT_BRACKET,
-            "~" to KeyEvent.KEYCODE_SHIFT_LEFT + KeyEvent.KEYCODE_GRAVE,
         )
-
         // Check if the label exists in the mapping
         return labelToKeycodeMap[label.lowercase()] // Convert label to lowercase for case-insensitivity
     }
@@ -714,7 +655,7 @@ class CustomKeyboardService : InputMethodService() {
             layoutType = "Language",
             onFileParsed = { keyboard, fileName, isFallback ->
                 languageLayouts.add(Pair(keyboard, isFallback))
-                Log.i(TAG, "Loaded language layout: $fileName (Fallback: $isFallback)")
+                //Log.i(TAG, "Loaded language layout: $fileName (Fallback: $isFallback)")
             },
             onFallback = { fileName ->
                 val fallbackLayout = loadFallbackLanguageLayout()
@@ -729,7 +670,7 @@ class CustomKeyboardService : InputMethodService() {
             layoutType = "Service",
             onFileParsed = { keyboard, fileName, isFallback ->
                 serviceLayouts[fileName] = Pair(keyboard, isFallback)
-                Log.i(TAG, "Loaded service layout: $fileName (Fallback: $isFallback)")
+                //Log.i(TAG, "Loaded service layout: $fileName (Fallback: $isFallback)")
             },
             onFallback = { fileName ->
                 val fallbackLayout = loadFallbackServiceLayout()
@@ -753,7 +694,7 @@ class CustomKeyboardService : InputMethodService() {
         onFileParsed: (CustomKeyboard, String, Boolean) -> Unit,
         onFallback: (String) -> Unit
     ) {
-        Log.i(TAG, "Checking $layoutType layouts directory: ${directory.absolutePath}")
+        //Log.i(TAG, "Checking $layoutType layouts directory: ${directory.absolutePath}")
 
         if (!directory.exists() || !directory.isDirectory) {
             val errorMsg = "$layoutType layouts directory does not exist or is not a directory: ${directory.absolutePath}"
@@ -768,10 +709,10 @@ class CustomKeyboardService : InputMethodService() {
             ?.sortedBy { it.name.lowercase() } // Sort files alphabetically, case-insensitive
             ?: emptyList()
 
-        Log.i(TAG, "Found ${files.size} valid $layoutType layout files in directory.")
+        //Log.i(TAG, "Found ${files.size} valid $layoutType layout files in directory.")
 
         if (files.isEmpty()) {
-            Log.w(TAG, "No valid $layoutType layouts found. Loading default fallback layout.")
+            //Log.w(TAG, "No valid $layoutType layouts found. Loading default fallback layout.")
             onFallback(Constants.LAYOUT_LANGUAGE_DEFAULT.takeIf { layoutType == "Language" }
                 ?: Constants.LAYOUT_SERVICE_DEFAULT)
             return
@@ -779,34 +720,28 @@ class CustomKeyboardService : InputMethodService() {
 
         files.forEach { file ->
             try {
-                Log.i(TAG, "Attempting to load $layoutType layout: ${file.name}")
+                //Log.i(TAG, "Attempting to load $layoutType layout: ${file.name}")
                 CustomKeyboard.fromJsonFile(this, file) { error ->
                     val errorMsg = "Error loading $layoutType layout from file: ${file.name}. Error: $error"
                     ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
                     onFallback(file.name)
                 }?.let { keyboard ->
                     onFileParsed(keyboard, file.nameWithoutExtension, false)
-                    Log.i(TAG, "Successfully loaded $layoutType layout: ${file.name}")
+                    //Log.i(TAG, "Successfully loaded $layoutType layout: ${file.name}")
                 }
             } catch (e: Exception) {
                 val parseError = "Failed to parse $layoutType layout: ${file.name}. Error: ${e.message}"
-                Log.e(TAG, parseError)
                 ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, parseError)
                 onFallback(file.name)
             }
         }
     }
 
-
-
-
-
-
     private fun loadFallbackLanguageLayout(): CustomKeyboard {
         return try {
             val json = resources.openRawResource(R.raw.keyboard_default).bufferedReader().use { it.readText() }
-            CustomKeyboard.fromJson(this, json)?.also {
-                Log.i(TAG, "Fallback language layout loaded successfully.")
+            CustomKeyboard.fromJson(this, json).also {
+                //Log.i(TAG, "Fallback language layout loaded successfully.")
             } ?: throw Exception("Parsed fallback language layout is null")
         } catch (e: Exception) {
             val errorMsg = "Error loading fallback language layout: ${e.message}"
@@ -818,8 +753,8 @@ class CustomKeyboardService : InputMethodService() {
     private fun loadFallbackServiceLayout(): CustomKeyboard {
         return try {
             val json = resources.openRawResource(R.raw.keyboard_service).bufferedReader().use { it.readText() }
-            CustomKeyboard.fromJson(this, json)?.also {
-                Log.i(TAG, "Fallback service layout loaded successfully.")
+            CustomKeyboard.fromJson(this, json).also {
+                //Log.i(TAG, "Fallback service layout loaded successfully.")
             } ?: throw Exception("Parsed fallback service layout is null")
         } catch (e: Exception) {
             val errorMsg = "Error loading fallback service layout: ${e.message}"
@@ -827,6 +762,4 @@ class CustomKeyboardService : InputMethodService() {
             throw e
         }
     }
-
-
 }

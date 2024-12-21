@@ -21,9 +21,7 @@ class CustomKeyboardView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     interface OnKeyboardActionListener {
-        fun onKey(primaryCode: Int, label: CharSequence?)
-        fun onText(text: CharSequence)
-        fun onRelease(codes: Int)
+        fun onKey(code: Int?, label: CharSequence?)
     }
 
     // Keyboard data.
@@ -145,7 +143,6 @@ class CustomKeyboardView @JvmOverloads constructor(
             }
         }
 
-
         // Reset states
         isLongPressHandled = false
         isKeyRepeated = false
@@ -154,15 +151,7 @@ class CustomKeyboardView @JvmOverloads constructor(
 
     private fun handleLongPress(key: Key) {
         isLongPressHandled = true
-
-        // Dispatch long press action
-        if (key.keyCodeLongPress != null) {
-            key.keyCodeLongPress.let { keyboardActionListener?.onKey(key.keyCodeLongPress, key.label) }
-
-        } else if (!key.smallLabel.isNullOrEmpty()) {
-            keyboardActionListener?.onText(key.smallLabel)
-        } else {
-        }
+        keyboardActionListener?.onKey(key.keyCodeLongPress, key.smallLabel)
     }
 
     private fun scheduleLongPress(key: Key) {
@@ -198,7 +187,7 @@ class CustomKeyboardView @JvmOverloads constructor(
         return super.dispatchTouchEvent(event)
     }
 
-    private fun isMetaKeyToggled(code: Int): Boolean {
+    private fun isMetaKeyToggled(code: Int?): Boolean {
         return when (code) {
             KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> isShiftOn
             KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT -> isCtrlOn

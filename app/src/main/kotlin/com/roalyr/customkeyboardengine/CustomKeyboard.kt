@@ -26,7 +26,7 @@ data class Row(
 
 @Serializable
 data class Key(
-    val keyCode: Int = Constants.NOT_A_KEY,
+    val keyCode: Int? = null,
     val keyCodeLongPress: Int? = null,
     val isRepeatable: Boolean = false,
     val isModifier: Boolean = false,

@@ -5,7 +5,7 @@ plugins {
 }
 android {
     namespace = "com.roalyr.new7rowkb"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.roalyr.new7rowkb"

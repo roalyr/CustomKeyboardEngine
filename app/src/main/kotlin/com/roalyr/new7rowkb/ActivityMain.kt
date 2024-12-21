@@ -30,8 +30,8 @@ import java.io.File
 class ActivityMain : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // Force ask for permissions
-        sendBroadcast(Intent(Constants.ACTION_CHECK_STORAGE_PERMISSIONS))
-        sendBroadcast(Intent(Constants.ACTION_CHECK_OVERLAY_PERMISSION))
+        sendBroadcast(Intent(Constants.Actions.CHECK_STORAGE_PERMISSIONS))
+        sendBroadcast(Intent(Constants.Actions.CHECK_OVERLAY_PERMISSION))
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -45,10 +45,15 @@ class ActivityMain : ComponentActivity() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        Button(onClick = { requestPermissions() }) {
+                            Text("Grant permissions")
+                        }
+                        Spacer(modifier = Modifier.height(32.dp))
                         Button(onClick = { openInputMethodSettings() }) {
                             Text("Change Input Method")
                         }
                         Spacer(modifier = Modifier.height(32.dp))
+
                         Button(onClick = { openKeyboardLayoutsDirectory() }) {
                             Text("TODO:Open Keyboard Layouts Directory")
                         }
@@ -61,6 +66,22 @@ class ActivityMain : ComponentActivity() {
             }
         }
     }
+
+    private fun requestPermissions() {
+        // Check and request storage permissions dynamically
+        ActivityPermissionRequest.checkAndRequestStoragePermissions(this)
+
+        // Check for SAF access (if required for your app)
+        val persistedUri = ActivityPermissionRequest.getPersistedSafUri(this)
+        if (persistedUri == null) {
+            // SAF URI not saved, request SAF permission
+            ActivityPermissionRequest.requestDocumentTreeAccess(this)
+        }
+
+        // Check and request overlay permission
+        ActivityPermissionRequest.checkAndRequestOverlayPermission(this)
+    }
+
 
     private fun openKeyboardLayoutsDirectory() {
         val appDir = File(

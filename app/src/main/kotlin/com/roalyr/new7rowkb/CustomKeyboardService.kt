@@ -51,7 +51,7 @@ class CustomKeyboardService : InputMethodService() {
 
     private val overlayPermissionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == Constants.ACTION_CHECK_OVERLAY_PERMISSION) {
+            if (intent.action == Constants.Actions.CHECK_OVERLAY_PERMISSION) {
                 ActivityPermissionRequest.checkAndRequestOverlayPermission(context)
             }
         }
@@ -59,7 +59,7 @@ class CustomKeyboardService : InputMethodService() {
 
     private val storagePermissionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == Constants.ACTION_CHECK_STORAGE_PERMISSIONS) {
+            if (intent.action == Constants.Actions.CHECK_STORAGE_PERMISSIONS) {
                 ActivityPermissionRequest.checkAndRequestStoragePermissions(context)
             }
         }
@@ -74,13 +74,14 @@ class CustomKeyboardService : InputMethodService() {
 
     override fun onCreate() {
         initWindowManager()
+        ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(windowManager, this, resources)
+
         // Register broadcast receivers
-        registerReceiver(overlayPermissionReceiver, IntentFilter(Constants.ACTION_CHECK_OVERLAY_PERMISSION), RECEIVER_NOT_EXPORTED)
-        registerReceiver(storagePermissionReceiver, IntentFilter(Constants.ACTION_CHECK_STORAGE_PERMISSIONS), RECEIVER_NOT_EXPORTED)
+        registerReceiver(overlayPermissionReceiver, IntentFilter(Constants.Actions.CHECK_OVERLAY_PERMISSION), RECEIVER_NOT_EXPORTED)
+        registerReceiver(storagePermissionReceiver, IntentFilter(Constants.Actions.CHECK_STORAGE_PERMISSIONS), RECEIVER_NOT_EXPORTED)
         // Force ask for permissions
-        sendBroadcast(Intent(Constants.ACTION_CHECK_STORAGE_PERMISSIONS))
-        sendBroadcast(Intent(Constants.ACTION_CHECK_OVERLAY_PERMISSION))
-        ClassFunctionsFiles.copyDefaultKeyboardLayouts(windowManager, this, resources)
+        sendBroadcast(Intent(Constants.Actions.CHECK_STORAGE_PERMISSIONS))
+        sendBroadcast(Intent(Constants.Actions.CHECK_OVERLAY_PERMISSION))
         super.onCreate()
     }
 
@@ -683,17 +684,20 @@ class CustomKeyboardService : InputMethodService() {
         return labelToKeycodeMap[label.lowercase()] // Convert label to lowercase for case-insensitivity
     }
 
-
     private fun reloadKeyboardLayouts() {
         Log.i(TAG, "Reloading all keyboard layouts.")
 
         // Clear existing layouts
+        ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(windowManager, this, resources)
         languageLayouts.clear()
         serviceLayouts.clear()
 
+        val languageDirectory = File(Constants.MEDIA_LAYOUTS_LANGUAGE_DIRECTORY)
+        val serviceDirectory = File(Constants.MEDIA_LAYOUTS_SERVICE_DIRECTORY)
+
         // Reload language layouts
         reloadLayouts(
-            directory = File(Constants.LAYOUTS_LANGUAGE_DIRECTORY),
+            directory = languageDirectory,
             layoutType = "Language",
             onFileParsed = { keyboard, fileName, isFallback ->
                 languageLayouts.add(Pair(keyboard, isFallback))
@@ -708,7 +712,7 @@ class CustomKeyboardService : InputMethodService() {
 
         // Reload service layouts
         reloadLayouts(
-            directory = File(Constants.LAYOUTS_SERVICE_DIRECTORY),
+            directory = serviceDirectory,
             layoutType = "Service",
             onFileParsed = { keyboard, fileName, isFallback ->
                 serviceLayouts[fileName] = Pair(keyboard, isFallback)
@@ -721,15 +725,14 @@ class CustomKeyboardService : InputMethodService() {
             }
         )
 
-        // Log the final counts of loaded layouts
-        Log.i(TAG, "Loaded ${languageLayouts.size} language layouts and ${serviceLayouts.size} service layouts.")
-
         // Reset to a valid index
-        if (currentLanguageLayoutIndex >= languageLayouts.size) {
+        if (currentLanguageLayoutIndex >= languageLayouts.size || currentLanguageLayoutIndex < 0) {
             currentLanguageLayoutIndex = 0
+            Log.i(TAG, "Resetting currentLanguageLayoutIndex to 0")
         }
-    }
 
+        Log.i(TAG, "Loaded ${languageLayouts.size} language layouts and ${serviceLayouts.size} service layouts.")
+    }
 
     private fun reloadLayouts(
         directory: File,
@@ -747,11 +750,15 @@ class CustomKeyboardService : InputMethodService() {
             return
         }
 
-        val files = directory.listFiles { _, name -> name.endsWith(".json") } ?: emptyArray()
-        Log.i(TAG, "Found ${files.size} $layoutType layout files in directory.")
+        val files = directory.listFiles()
+            ?.filter { it.isFile && it.canRead() && it.name.endsWith(".json") }
+            ?.sortedBy { it.name.lowercase() } // Sort files alphabetically, case-insensitive
+            ?: emptyList()
+
+        Log.i(TAG, "Found ${files.size} valid $layoutType layout files in directory.")
 
         if (files.isEmpty()) {
-            Log.w(TAG, "No $layoutType layouts found. Loading default fallback layout.")
+            Log.w(TAG, "No valid $layoutType layouts found. Loading default fallback layout.")
             onFallback(Constants.LAYOUT_LANGUAGE_DEFAULT.takeIf { layoutType == "Language" }
                 ?: Constants.LAYOUT_SERVICE_DEFAULT)
             return
@@ -763,17 +770,21 @@ class CustomKeyboardService : InputMethodService() {
                 CustomKeyboard.fromJsonFile(this, file) { error ->
                     val errorMsg = "Error loading $layoutType layout from file: ${file.name}. Error: $error"
                     ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-                    onFallback(file.name) // Trigger fallback for this file
+                    onFallback(file.name)
                 }?.let { keyboard ->
                     onFileParsed(keyboard, file.nameWithoutExtension, false)
+                    Log.i(TAG, "Successfully loaded $layoutType layout: ${file.name}")
                 }
             } catch (e: Exception) {
                 val parseError = "Failed to parse $layoutType layout: ${file.name}. Error: ${e.message}"
+                Log.e(TAG, parseError)
                 ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, parseError)
-                onFallback(file.name) // Trigger fallback for this file
+                onFallback(file.name)
             }
         }
     }
+
+
 
 
 

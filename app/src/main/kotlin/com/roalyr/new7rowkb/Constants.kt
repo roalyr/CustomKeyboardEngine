@@ -7,15 +7,6 @@ class Constants {
         const val LAYOUT_LANGUAGE_DEFAULT = "keyboard-en-default"
         const val LAYOUT_SERVICE_DEFAULT = "keyboard-service-default"
 
-        // Actions.
-        const val ACTION_CHECK_OVERLAY_PERMISSION = "com.roalyr.new7rowkb.CHECK_OVERLAY_PERMISSION"
-        const val ACTION_CHECK_STORAGE_PERMISSIONS = "com.roalyr.new7rowkb.CHECK_STORAGE_PERMISSIONS"
-        //Permissions.
-        const val EXTRA_PERMISSION_TYPE = "EXTRA_PERMISSION_TYPE"
-        const val PERMISSION_TYPE_OVERLAY = "PERMISSION_TYPE_OVERLAY"
-        const val PERMISSION_TYPE_STORAGE = "PERMISSION_TYPE_STORAGE"
-        const val REQUEST_CODE_STORAGE_PERMISSIONS = 1001
-        const val REQUEST_CODE_OVERLAY_PERMISSION = 1002
         // Keyboard internals.
         const val KEYBOARD_MINIMAL_WIDTH = 500
         const val KEYBOARD_MINIMAL_HEIGHT = 500
@@ -44,16 +35,35 @@ class Constants {
         const val DEFAULT_KEY_GAP = 1f
 
         // Paths
-        // Base directory for the app
-        val APP_DIRECTORY: String
-            get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)}/New7rowKB"
+        private const val APP_MEDIA_NAME = "com.roalyr.new7rowkb"
+        private const val LAYOUTS_DIRECTORY_NAME = "layouts"
+        private const val LAYOUTS_LANGUAGE_NAME = "layouts-language"
+        private const val LAYOUTS_SERVICE_NAME = "layouts-service"
 
-        // Correct path for language layouts
-        val LAYOUTS_LANGUAGE_DIRECTORY: String
-            get() = "$APP_DIRECTORY/layouts/language-layouts"
+        val MEDIA_LAYOUTS_LANGUAGE_DIRECTORY: String
+            get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).parent}/Android/media/$APP_MEDIA_NAME/$LAYOUTS_DIRECTORY_NAME/$LAYOUTS_LANGUAGE_NAME"
 
-        // Correct path for service layouts
-        val LAYOUTS_SERVICE_DIRECTORY: String
-            get() = "$APP_DIRECTORY/layouts/layouts-service"
+        val MEDIA_LAYOUTS_SERVICE_DIRECTORY: String
+            get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).parent}/Android/media/$APP_MEDIA_NAME/$LAYOUTS_DIRECTORY_NAME/$LAYOUTS_SERVICE_NAME"
+
+
     }
+
+    object Actions {
+        const val CHECK_OVERLAY_PERMISSION = "com.roalyr.new7rowkb.CHECK_OVERLAY_PERMISSION"
+        const val CHECK_STORAGE_PERMISSIONS = "com.roalyr.new7rowkb.CHECK_STORAGE_PERMISSIONS"
+    }
+
+    object PermissionTypes {
+        const val EXTRA_TYPE = "EXTRA_PERMISSION_TYPE"
+        const val OVERLAY = "PERMISSION_TYPE_OVERLAY"
+        const val STORAGE = "PERMISSION_TYPE_STORAGE"
+    }
+
+    object RequestCodes {
+        const val STORAGE_PERMISSIONS = 1001
+        const val OVERLAY_PERMISSION = 1002
+    }
+
+
 }

@@ -60,8 +60,11 @@ class CustomKeyboardView @JvmOverloads constructor(
     private var isKeyRepeated = false
     private var isLongPressHandled = false
     private var downKeyIndex = -1
-    private var currentKey: Key? = null
+
     private var repeatKeyRunnable: Runnable? = null
+
+    private val activeKeys = mutableMapOf<Int, Key?>() // Track active keys by pointer ID
+
 
     companion object {
         private const val TAG = "CustomKeyboardView"
@@ -71,7 +74,6 @@ class CustomKeyboardView @JvmOverloads constructor(
         private const val REPEAT_START_DELAY = 250
     }
 
-    ///////////////////////////////////
     // INIT
     init {
         isFocusable = true
@@ -87,10 +89,7 @@ class CustomKeyboardView @JvmOverloads constructor(
         invalidateAllKeys()
     }
 
-
-    /////////////////////////////////////
     // Handle events
-
     private val handlerCallback = Handler.Callback { msg ->
         if (msg.what == MSG_LONGPRESS) {
             val key = msg.obj as? Key
@@ -105,7 +104,7 @@ class CustomKeyboardView @JvmOverloads constructor(
 
     private val handler = Handler(Looper.getMainLooper(), handlerCallback)
 
-    private fun handleTouchDown(x: Int, y: Int) {
+    private fun handleTouchDown(x: Int, y: Int, pointerId: Int) {
         val key = keyboard?.getKeyAt(x.toFloat(), y.toFloat()) ?: return
 
         downKeyIndex = keys?.indexOf(key) ?: -1
@@ -120,34 +119,39 @@ class CustomKeyboardView @JvmOverloads constructor(
             scheduleLongPress(key)
         }
 
-        // Save key reference for later use in handleTouchUp
-        currentKey = key
+        // Save key reference in the activeKeys map
+        activeKeys[pointerId] = key
     }
 
-    private fun handleTouchUp(x: Int, y: Int) {
-        // Cancel repeat and long press behavior
+
+    private fun handleTouchUp(x: Int, y: Int, pointerId: Int) {
         cancelRepeatKey()
         handler.removeMessages(MSG_LONGPRESS)
 
-        currentKey?.let { key ->
+        // Retrieve the key associated with this pointer ID
+        val key = activeKeys[pointerId]
+
+        key?.let {
             when {
                 isLongPressHandled -> {
-                    // Skip short press if long press is already handled
+                    return
                 }
                 isKeyRepeated -> {
-                    // Skip short press if key repeat is already handled
+                    return
                 }
                 else -> {
-                    keyboardActionListener?.onKey(key.keyCode, key.label)
+                    keyboardActionListener?.onKey(it.keyCode, it.label)
                 }
             }
         }
 
-        // Reset states
+        // Reset states for this pointer
         isLongPressHandled = false
         isKeyRepeated = false
-        currentKey = null
+        activeKeys.remove(pointerId)
     }
+
+
 
     private fun handleLongPress(key: Key) {
         isLongPressHandled = true
@@ -203,19 +207,51 @@ class CustomKeyboardView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val action = event.action
-        val scaledX = (event.x / scaleX).toInt()
-        val scaledY = (event.y / scaleY).toInt()
+        val actionMasked = event.actionMasked // Use actionMasked for multi-touch support
+        val pointerIndex = event.actionIndex // Index of the pointer causing the event
+        val pointerId = event.getPointerId(pointerIndex)
 
-        when (action) {
-            MotionEvent.ACTION_DOWN -> {
-                handleTouchDown(scaledX, scaledY)
+        when (actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                // Handle new touch
+                val scaledX = (event.getX(pointerIndex) / scaleX).toInt()
+                val scaledY = (event.getY(pointerIndex) / scaleY).toInt()
+                handleTouchDown(scaledX, scaledY, pointerId)
                 performClick()
+                //Log.d("TOUCH", "Pointer Down: Index $pointerIndex, x=$scaledX, y=$scaledY")
             }
 
-            MotionEvent.ACTION_MOVE -> handleTouchMove(scaledX, scaledY)
-            MotionEvent.ACTION_UP -> handleTouchUp(scaledX, scaledY)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                // Handle touch release
+                val scaledX = (event.getX(pointerIndex) / scaleX).toInt()
+                val scaledY = (event.getY(pointerIndex) / scaleY).toInt()
+                handleTouchUp(scaledX, scaledY, pointerId)
+                performClick()
+                //Log.d("TOUCH", "Pointer Up: Index $pointerIndex, x=$scaledX, y=$scaledY")
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                // Handle touch move for all active pointers
+                //for (i in 0 until event.pointerCount) {
+                    //val scaledX = (event.getX(i) / scaleX).toInt()
+                    //val scaledY = (event.getY(i) / scaleY).toInt()
+                    //handleTouchMove(scaledX, scaledY)
+                    //Log.d("TOUCH", "Pointer Move: Index $i, x=$scaledX, y=$scaledY")
+                //}
+            }
+
+            MotionEvent.ACTION_CANCEL -> {
+                // Handle cancel action if necessary
+                //Log.d("TOUCH", "Action Cancel")
+            }
         }
+        return true
+    }
+
+
+    override fun performClick(): Boolean {
+        // Call the superclass implementation (important for accessibility events)
+        super.performClick()
         return true
     }
 

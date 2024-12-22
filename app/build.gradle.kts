@@ -4,6 +4,10 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 android {
+    signingConfigs {
+        create("release") {
+        }
+    }
     namespace = "com.roalyr.customkeyboardengine"
     compileSdk = 34
 
@@ -11,14 +15,16 @@ android {
         applicationId = "com.roalyr.customkeyboardengine"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.2"
+        versionCode = 2
+        versionName = "1.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+        versionNameSuffix = "-beta"
     }
+
 
     buildTypes {
         release {

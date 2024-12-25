@@ -1,8 +1,6 @@
-# CustomKeyboardEngine
+![doc/banner.png](doc/banner.png)
 
-CustomKeyboardEngine is a flexible and customizable keyboard engine for Android.
-
-![img_main.png](doc/img_main.png)
+### CustomKeyboardEngine is a flexible and customizable keyboard engine for Android.
 
 ---
 
@@ -23,11 +21,12 @@ CustomKeyboardEngine is a flexible and customizable keyboard engine for Android.
 
 ## Screenshots
 
-![screen_combined_landscape.png](doc/screen_combined_landscape.png)
+![screenshots1.png](doc/screenshots1.png)
 
-![screen_floating_landscape.png](doc/screen_floating_landscape.png)
+![screenshots2.png](doc/screenshots2.png)
 
-![screen_floating_landscape_tablet.png](doc/screen_floating_landscape_tablet.png)
+![screenshots3.png](doc/screenshots3.png)
 
----
+![screenshots4.png](doc/screenshots4.png)
+
 

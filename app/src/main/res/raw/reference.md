@@ -71,7 +71,36 @@ Defines individual key attributes.
 
 ---
 
-## TODO: List of icons
+## Available Icons
+
+An example of declaring a key icon: `"icon": "@drawable/ic_tab"`
+
+
+| File Name                       | Icon description                |
+|---------------------------------|---------------------------------|
+| ic_anchor                       | Anchor                          |
+| ic_backspace                    | Backspace                       |
+| ic_clipboard                    | Clipboard                       |
+| ic_close                        | Close                           |
+| ic_down_bold_arrow              | Down Bold Arrow                 |
+| ic_down_triangle_arrow          | Down Triangle Arrow             |
+| ic_emoji                        | Emoji                           |
+| ic_eye                          | Eye                             |
+| ic_eye_disabled                 | Eye Disabled                    |
+| ic_launcher_background          | Launcher Background             |
+| ic_launcher_foreground          | Launcher Foreground             |
+| ic_left_bold_arrow              | Left Bold Arrow                 |
+| ic_left_triangle_arrow          | Left Triangle Arrow             |
+| ic_right_bold_arrow             | Right Bold Arrow                |
+| ic_right_triangle_arrow         | Right Triangle Arrow            |
+| ic_space                        | Space                           |
+| ic_tab                          | Tab                             |
+| ic_up_bold_arrow                | Up Bold Arrow                   |
+| ic_up_triangle_arrow            | Up Triangle Arrow               |
+| ic_warning                      | Warning                         |
+| ic_zoom_in                      | Zoom In                         |
+| ic_zoom_out                     | Zoom Out                        |
+
 
 ---
 

@@ -122,7 +122,7 @@ class CustomKeyboardView @JvmOverloads constructor(
         isKeyRepeated = false
 
         // Start repeatable keys only if repeatable
-        if (key.isRepeatable) {
+        if (key.isRepeatable == true) {
             startKeyRepeat(key)
         } else {
             // Schedule long press for non-repeatable keys
@@ -377,11 +377,11 @@ class CustomKeyboardView @JvmOverloads constructor(
                 val keyBounds = RectF(keyX, keyY, keyX + keyWidth, keyY + keyHeight)
 
                 // Draw the key background
-                paint.color = if (key.isModifier) keyModifierBackgroundColor else keyBackgroundColor
+                paint.color = if (key.isModifier == true) keyModifierBackgroundColor else keyBackgroundColor
                 canvas.drawRect(keyBounds, paint)
 
                 // --- Draw key background ---
-                paint.color = if (key.isModifier) keyModifierBackgroundColor else keyBackgroundColor
+                paint.color = if (key.isModifier == true) keyModifierBackgroundColor else keyBackgroundColor
                 canvas.drawRect(keyBounds, paint)
 
                 // --- Draw icon if present ---
@@ -480,7 +480,7 @@ class CustomKeyboardView @JvmOverloads constructor(
     private fun updateLabelState(key: Key): String? {
 
         // If preserveLabelCase is true, return the label as is.
-        if (key.preserveLabelCase) {
+        if (key.preserveLabelCase == true) {
             return key.label
         }
 
@@ -495,15 +495,15 @@ class CustomKeyboardView @JvmOverloads constructor(
                 // For meta keys toggled off, use lowercase.
                 key.label?.lowercase()
             }
-            key.isModifier && key.keyCode !in metaKeyCodes -> {
+            key.isModifier == true && key.keyCode !in metaKeyCodes -> {
                 // Modifier keys not in meta keys list (like Esc, Ent, Tab) retain their label.
                 key.label
             }
-            !key.isModifier && (isShiftOn || isCapsLockOn) -> {
+            key.isModifier == false && (isShiftOn || isCapsLockOn) -> {
                 // Non-modifier keys (ordinary characters) shift to uppercase when Shift or Caps Lock is active.
                 key.label?.uppercase()
             }
-            !key.isModifier -> {
+            key.isModifier == false -> {
                 // Non-modifier keys (ordinary characters) shift to lowercase when Shift and Caps Lock are inactive.
                 key.label?.lowercase()
             }
@@ -516,7 +516,7 @@ class CustomKeyboardView @JvmOverloads constructor(
 
     private fun updateSmallLabelState(key: Key): String? {
         // If preserveSmallLabelCase is true, return the small label as is.
-        if (key.preserveSmallLabelCase) {
+        if (key.preserveSmallLabelCase == true) {
             return key.smallLabel
         }
 
@@ -531,15 +531,15 @@ class CustomKeyboardView @JvmOverloads constructor(
                 // For meta keys toggled off, use lowercase.
                 key.smallLabel?.lowercase()
             }
-            key.isModifier && key.keyCodeLongPress !in metaKeyCodes -> {
+            key.isModifier == true && key.keyCodeLongPress !in metaKeyCodes -> {
                 // Modifier keys not in meta keys list (like Esc, Ent, Tab) retain their small label.
                 key.smallLabel
             }
-            !key.isModifier && (isShiftOn || isCapsLockOn) -> {
+            key.isModifier == false && (isShiftOn || isCapsLockOn) -> {
                 // Non-modifier keys (ordinary characters) shift to uppercase when Shift or Caps Lock is active.
                 key.smallLabel?.uppercase()
             }
-            !key.isModifier -> {
+            key.isModifier == false -> {
                 // Non-modifier keys (ordinary characters) shift to lowercase when Shift and Caps Lock are inactive.
                 key.smallLabel?.lowercase()
             }

@@ -12,7 +12,7 @@ data class KeyboardLayout(
     val defaultKeyHeight: Float = Constants.DEFAULT_KEY_HEIGHT,     // Absolute value in DP
     val defaultKeyWidth: Float = Constants.DEFAULT_KEY_WIDTH,      // Percentage of row width
     val defaultRowGap: Float = Constants.DEFAULT_ROW_GAP,         // Absolute value in DP (space between rows)
-    val defaultKeyGap: Float = Constants.DEFAULT_KEY_GAP          // Absolute value in DP (space between keys)
+    val defaultKeyGap: Float = Constants.DEFAULT_KEY_GAP          // Percentage of row width (space between keys)
 )
 
 @Serializable
@@ -28,10 +28,10 @@ data class Row(
 data class Key(
     val keyCode: Int? = null,
     val keyCodeLongPress: Int? = null,
-    val isRepeatable: Boolean = false,
-    val isModifier: Boolean = false,
-    val preserveLabelCase: Boolean = false,
-    val preserveSmallLabelCase: Boolean = false,
+    val isRepeatable: Boolean? = false,
+    val isModifier: Boolean? = false,
+    val preserveLabelCase: Boolean? = false,
+    val preserveSmallLabelCase: Boolean? = false,
     var label: String? = null,
     val smallLabel: String? = null,
     val icon: String? = null,

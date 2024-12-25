@@ -6,21 +6,30 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,7 +40,6 @@ class ActivityMain : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             CustomKeyboardEngineTheme {
                 Scaffold(
@@ -43,17 +51,18 @@ class ActivityMain : ComponentActivity() {
                         modifier = Modifier
                             .padding(innerPadding)
                             .fillMaxSize()
-                            .padding(horizontal = 24.dp),
-                        verticalArrangement = Arrangement.Center,
+                            .verticalScroll(rememberScrollState()) // Enable scrolling
+                            .padding(horizontal = 24.dp)
+                            .padding(WindowInsets.systemBars.asPaddingValues()) // Respect notification bar
+                            .imePadding()
+                        , // Adjust for keyboard
+                        verticalArrangement = Arrangement.spacedBy(8.dp), // Uniform spacing
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // App Title
-                        Text(
-                            text = "CustomKeyboardEngine",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(bottom = 32.dp)
-                        )
+                        // Spacer for Title
+                        Spacer(modifier = Modifier.height(16.dp)) // Add initial padding for safe area
+
+
 
                         // Buttons
                         Button(
@@ -64,8 +73,6 @@ class ActivityMain : ComponentActivity() {
                             Text("1. Grant Storage Permission")
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
                         Button(
                             onClick = { requestOverlayPermission() },
                             modifier = Modifier.fillMaxWidth(),
@@ -73,8 +80,6 @@ class ActivityMain : ComponentActivity() {
                         ) {
                             Text("2. Grant Overlay Permission")
                         }
-
-                        Spacer(modifier = Modifier.height(16.dp))
 
                         Button(
                             onClick = { openInputMethodSettings() },
@@ -84,22 +89,71 @@ class ActivityMain : ComponentActivity() {
                             Text("3. Change Input Method")
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        // Path Reference
+                        Text(
+                            text = "📂 Working Directory Path:",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                                .padding(8.dp)
+                                .fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "/storage/emulated/0/Android/media/com.roalyr.customkeyboardengine/",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                fontFamily = FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        // Hint Messages
+                        Text(
+                            text = "ℹ️ HINT: Look for `.json` files in the directory above. " +
+                                    "You can edit them using any external text editor. Refer to `${Constants.REFERENCE_DEFAULT}` in the folder for more information.",
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal,
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Text(
+                            text = "ℹ️ HINT: If the directory is not created automatically, " +
+                                    "create it manually and restart the app.",
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal,
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
                         // Warning Message
                         Text(
-                            text = "⚠️ IMPORTANT: Backup files in /Android/media/com.roalyr.customkeyboardengine " +
-                                    "to prevent data loss before uninstalling the app.",
+                            text = "⚠️ IMPORTANT: Backup files in the directory above to prevent data loss before uninstalling the app.",
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.fillMaxWidth()
                         )
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        // Text Input Field
+                        val text = remember { mutableStateOf("") }
+                        androidx.compose.material3.TextField(
+                            value = text.value,
+                            onValueChange = { text.value = it },
+                            placeholder = { Text("Type here to test keyboard...") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
                         // GitHub Link
                         Button(
@@ -109,6 +163,8 @@ class ActivityMain : ComponentActivity() {
                         ) {
                             Text("Visit GitHub Page")
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp)) // Add space at the bottom
                     }
                 }
             }

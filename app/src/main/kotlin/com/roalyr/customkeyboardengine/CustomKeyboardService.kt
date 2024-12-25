@@ -1,9 +1,5 @@
 package com.roalyr.customkeyboardengine
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.inputmethodservice.InputMethodService
@@ -52,21 +48,7 @@ class CustomKeyboardService : InputMethodService() {
         private const val TAG = "CustomKeyboardService"
     }
 
-    private val overlayPermissionReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == Constants.Actions.CHECK_OVERLAY_PERMISSION) {
-                ActivityPermissionRequest.checkAndRequestOverlayPermission(context)
-            }
-        }
-    }
 
-    private val storagePermissionReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == Constants.Actions.CHECK_STORAGE_PERMISSIONS) {
-                ActivityPermissionRequest.checkAndRequestStoragePermissions(context)
-            }
-        }
-    }
 
     ////////////////////////////////////////////
     // Init the keyboard
@@ -78,20 +60,10 @@ class CustomKeyboardService : InputMethodService() {
     override fun onCreate() {
         initWindowManager()
         ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(windowManager, this, resources)
-
-        // Register broadcast receivers
-        registerReceiver(overlayPermissionReceiver, IntentFilter(Constants.Actions.CHECK_OVERLAY_PERMISSION), RECEIVER_NOT_EXPORTED)
-        registerReceiver(storagePermissionReceiver, IntentFilter(Constants.Actions.CHECK_STORAGE_PERMISSIONS), RECEIVER_NOT_EXPORTED)
-        // Force ask for permissions
-        sendBroadcast(Intent(Constants.Actions.CHECK_STORAGE_PERMISSIONS))
-        sendBroadcast(Intent(Constants.Actions.CHECK_OVERLAY_PERMISSION))
         super.onCreate()
     }
 
     override fun onDestroy() {
-        // Unregister broadcast receivers
-        unregisterReceiver(overlayPermissionReceiver)
-        unregisterReceiver(storagePermissionReceiver)
         closeAllKeyboards()
         super.onDestroy()
     }

@@ -16,6 +16,7 @@ class ClassFunctionsFiles {
             context: Context,
             resources: Resources
         ) {
+            val appDir = File(Constants.MEDIA_APP_DIRECTORY)
             val languageDir = File(Constants.MEDIA_LAYOUTS_LANGUAGE_DIRECTORY)
             val serviceDir = File(Constants.MEDIA_LAYOUTS_SERVICE_DIRECTORY)
 
@@ -41,6 +42,13 @@ class ClassFunctionsFiles {
             copyDefaultLayoutIfMissing(
                 "${serviceDir.absolutePath}/${Constants.LAYOUT_SERVICE_DEFAULT}.json",
                 R.raw.keyboard_service,
+                context,
+                resources
+            )
+
+            copyDefaultLayoutIfMissing(
+                "${appDir.absolutePath}/${Constants.REFERENCE_DEFAULT}",
+                R.raw.reference,
                 context,
                 resources
             )

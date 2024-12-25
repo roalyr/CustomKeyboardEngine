@@ -6,6 +6,8 @@ class Constants {
     companion object{
         const val LAYOUT_LANGUAGE_DEFAULT = "keyboard-en-default"
         const val LAYOUT_SERVICE_DEFAULT = "keyboard-service-default"
+        const val REFERENCE_DEFAULT = "reference.md"
+
 
         // Keyboard internals.
         const val KEYBOARD_MINIMAL_WIDTH = 500
@@ -40,11 +42,14 @@ class Constants {
         private const val LAYOUTS_LANGUAGE_NAME = "layouts-language"
         private const val LAYOUTS_SERVICE_NAME = "layouts-service"
 
+        val MEDIA_APP_DIRECTORY: String
+            get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).parent}/Android/media/$APP_MEDIA_NAME/"
+
         val MEDIA_LAYOUTS_LANGUAGE_DIRECTORY: String
-            get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).parent}/Android/media/$APP_MEDIA_NAME/$LAYOUTS_DIRECTORY_NAME/$LAYOUTS_LANGUAGE_NAME"
+            get() = "$MEDIA_APP_DIRECTORY/$LAYOUTS_DIRECTORY_NAME/$LAYOUTS_LANGUAGE_NAME"
 
         val MEDIA_LAYOUTS_SERVICE_DIRECTORY: String
-            get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).parent}/Android/media/$APP_MEDIA_NAME/$LAYOUTS_DIRECTORY_NAME/$LAYOUTS_SERVICE_NAME"
+            get() = "$MEDIA_APP_DIRECTORY/$LAYOUTS_DIRECTORY_NAME/$LAYOUTS_SERVICE_NAME"
 
     }
 

@@ -65,6 +65,16 @@ class CustomKeyboardView @JvmOverloads constructor(
 
     private val activeKeys = mutableMapOf<Int, Key?>() // Track active keys by pointer ID
 
+    // Define specific meta key codes for shifting case.
+    private val metaKeyCodes = arrayOf(
+        KeyEvent.KEYCODE_SHIFT_LEFT,
+        KeyEvent.KEYCODE_SHIFT_RIGHT,
+        KeyEvent.KEYCODE_CTRL_LEFT,
+        KeyEvent.KEYCODE_CTRL_RIGHT,
+        KeyEvent.KEYCODE_ALT_LEFT,
+        KeyEvent.KEYCODE_ALT_RIGHT,
+        KeyEvent.KEYCODE_CAPS_LOCK
+    )
 
     companion object {
         private const val TAG = "CustomKeyboardView"
@@ -124,7 +134,7 @@ class CustomKeyboardView @JvmOverloads constructor(
     }
 
 
-    private fun handleTouchUp(x: Int, y: Int, pointerId: Int) {
+    private fun handleTouchUp(pointerId: Int) {
         cancelRepeatKey()
         handler.removeMessages(MSG_LONGPRESS)
 
@@ -225,7 +235,7 @@ class CustomKeyboardView @JvmOverloads constructor(
                 // Handle touch release
                 val scaledX = (event.getX(pointerIndex) / scaleX).toInt()
                 val scaledY = (event.getY(pointerIndex) / scaleY).toInt()
-                handleTouchUp(scaledX, scaledY, pointerId)
+                handleTouchUp(pointerId)
                 performClick()
                 //Log.d("TOUCH", "Pointer Up: Index $pointerIndex, x=$scaledX, y=$scaledY")
             }
@@ -255,6 +265,7 @@ class CustomKeyboardView @JvmOverloads constructor(
         return true
     }
 
+    // TODO: Swipes
     private fun handleTouchMove(x: Int, y: Int) {
         // Optional: Cancel repeat/long press if the finger moves off the key
         if (keyboard?.getKeyAt(x.toFloat(), y.toFloat()) == null) {
@@ -263,9 +274,6 @@ class CustomKeyboardView @JvmOverloads constructor(
         }
     }
 
-    fun isLongPressing(): Boolean {
-        return isLongPressHandled
-    }
 
 
 
@@ -342,7 +350,6 @@ class CustomKeyboardView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val keyboard = keyboard ?: return
-        val keys = keys ?: return
 
         val totalWidth = width.toFloat() // Screen width
         val scaleX = totalWidth / keyboard.totalLogicalWidth
@@ -391,72 +398,63 @@ class CustomKeyboardView @JvmOverloads constructor(
                     // Check if small label exists
                     if (key.smallLabel != null) {
                         // --- Draw small label (secondary text) ---
-                        key.smallLabel?.let { smallLabel ->
+                        key.smallLabel.let {
                             paint.color = keySmallTextColor
                             paint.textSize = keyHeight * 0.3f
                             paint.textAlign = Paint.Align.CENTER
 
-                            // Transform the label dynamically based on meta states
-                            val renderedLabel = if (key.isModifier && isMetaKeyToggled(key.keyCode)) {
-                                smallLabel.uppercase()
-                            } else if (!key.isModifier && (isShiftOn || isCapsLockOn)) {
-                                smallLabel.uppercase()
-                            } else {
-                                smallLabel.lowercase()
-                            }
+                            // Transform the small label dynamically based on meta states
+                            val renderedSmallLabel = updateSmallLabelState(key) ?: ""
 
-                            canvas.drawText(
-                                renderedLabel,
-                                keyBounds.centerX(),
-                                keyBounds.top + keyHeight * 0.35f, // Upper half position
-                                paint
-                            )
+                            // Draw the small label if it's not empty
+                            if (renderedSmallLabel.isNotEmpty()) {
+                                canvas.drawText(
+                                    renderedSmallLabel,
+                                    keyBounds.centerX(),
+                                    keyBounds.top + keyHeight * 0.35f, // Upper half position
+                                    paint
+                                )
+                            }
                         }
 
                         // --- Draw primary label (main text) ---
-                        key.label?.let { label ->
+                        key.label?.let {
                             paint.color = keyTextColor
                             paint.textSize = keyHeight * 0.35f
                             paint.textAlign = Paint.Align.CENTER
 
                             // Transform the label dynamically based on meta states
-                            val renderedLabel = if (key.isModifier && isMetaKeyToggled(key.keyCode)) {
-                                label.uppercase()
-                            } else if (!key.isModifier && (isShiftOn || isCapsLockOn)) {
-                                label.uppercase()
-                            } else {
-                                label.lowercase()
-                            }
+                            val renderedLabel = updateLabelState(key) ?: ""
 
-                            canvas.drawText(
-                                renderedLabel,
-                                keyBounds.centerX(),
-                                keyBounds.centerY() + keyHeight * 0.3f, // Slightly lower in the middle half
-                                paint
-                            )
+                            // Draw the label if it's not empty
+                            if (renderedLabel.isNotEmpty()) {
+                                canvas.drawText(
+                                    renderedLabel,
+                                    keyBounds.centerX(),
+                                    keyBounds.centerY() + keyHeight * 0.3f, // Slightly lower in the middle half
+                                    paint
+                                )
+                            }
                         }
                     } else {
                         // --- Draw primary label only (centered) ---
-                        key.label?.let { label ->
+                        key.label?.let {
                             paint.color = keyTextColor
                             paint.textSize = keyHeight * 0.4f
                             paint.textAlign = Paint.Align.CENTER
 
                             // Transform the label dynamically based on meta states
-                            val renderedLabel = if (key.isModifier && isMetaKeyToggled(key.keyCode)) {
-                                label.uppercase()
-                            } else if (!key.isModifier && (isShiftOn || isCapsLockOn)) {
-                                label.uppercase()
-                            } else {
-                                label.lowercase()
-                            }
+                            val renderedLabel = updateLabelState(key) ?: ""
 
-                            canvas.drawText(
-                                renderedLabel,
-                                keyBounds.centerX(),
-                                keyBounds.centerY() + (paint.textSize / 3), // Centered vertically
-                                paint
-                            )
+                            // Draw the label if it's not empty
+                            if (renderedLabel.isNotEmpty()) {
+                                canvas.drawText(
+                                    renderedLabel,
+                                    keyBounds.centerX(),
+                                    keyBounds.centerY() + (paint.textSize / 3), // Centered vertically
+                                    paint
+                                )
+                            }
                         }
                     }
                 }
@@ -478,6 +476,82 @@ class CustomKeyboardView @JvmOverloads constructor(
         isCapsLockOn = capsLockOn
         invalidateAllKeys()
     }
+
+    private fun updateLabelState(key: Key): String? {
+
+        // If preserveLabelCase is true, return the label as is.
+        if (key.preserveLabelCase) {
+            return key.label
+        }
+
+        val isMetaKeyToggled = isMetaKeyToggled(key.keyCode)
+
+        return when {
+            key.keyCode in metaKeyCodes && isMetaKeyToggled -> {
+                // For meta keys (CAP, CTRL, SHIFT, ALT) toggled on, use uppercase.
+                key.label?.uppercase()
+            }
+            key.keyCode in metaKeyCodes && !isMetaKeyToggled -> {
+                // For meta keys toggled off, use lowercase.
+                key.label?.lowercase()
+            }
+            key.isModifier && key.keyCode !in metaKeyCodes -> {
+                // Modifier keys not in meta keys list (like Esc, Ent, Tab) retain their label.
+                key.label
+            }
+            !key.isModifier && (isShiftOn || isCapsLockOn) -> {
+                // Non-modifier keys (ordinary characters) shift to uppercase when Shift or Caps Lock is active.
+                key.label?.uppercase()
+            }
+            !key.isModifier -> {
+                // Non-modifier keys (ordinary characters) shift to lowercase when Shift and Caps Lock are inactive.
+                key.label?.lowercase()
+            }
+            else -> {
+                // Default case for any other keys, retain the original label.
+                key.label
+            }
+        }
+    }
+
+    private fun updateSmallLabelState(key: Key): String? {
+        // If preserveSmallLabelCase is true, return the small label as is.
+        if (key.preserveSmallLabelCase) {
+            return key.smallLabel
+        }
+
+        val isMetaKeyToggled = key.keyCodeLongPress?.let { isMetaKeyToggled(it) } ?: false
+
+        return when {
+            key.keyCodeLongPress in metaKeyCodes && isMetaKeyToggled -> {
+                // For meta keys (CAP, CTRL, SHIFT, ALT) toggled on, use uppercase.
+                key.smallLabel?.uppercase()
+            }
+            key.keyCodeLongPress in metaKeyCodes && !isMetaKeyToggled -> {
+                // For meta keys toggled off, use lowercase.
+                key.smallLabel?.lowercase()
+            }
+            key.isModifier && key.keyCodeLongPress !in metaKeyCodes -> {
+                // Modifier keys not in meta keys list (like Esc, Ent, Tab) retain their small label.
+                key.smallLabel
+            }
+            !key.isModifier && (isShiftOn || isCapsLockOn) -> {
+                // Non-modifier keys (ordinary characters) shift to uppercase when Shift or Caps Lock is active.
+                key.smallLabel?.uppercase()
+            }
+            !key.isModifier -> {
+                // Non-modifier keys (ordinary characters) shift to lowercase when Shift and Caps Lock are inactive.
+                key.smallLabel?.lowercase()
+            }
+            else -> {
+                // Default case for any other keys, retain the original small label.
+                key.smallLabel
+            }
+        }
+    }
+
+
+
 
     // Helper function to fetch drawable icons
     private fun getIconDrawable(iconName: String): Drawable? {

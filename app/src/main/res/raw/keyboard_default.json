@@ -1,11 +1,10 @@
 {
   "defaultKeyWidth": 10,
-  "defaultKeyHeight": 50,
+  "defaultKeyHeight": 45,
   "defaultRowGap": 0.5,
   "defaultKeyGap": 0.1,
   "rows": [
     {
-      "rowHeight": 40,
       "defaultKeyWidth": 8.3,
       "keys": [
         {
@@ -32,7 +31,6 @@
       ]
     },
     {
-      "rowHeight": 40,
       "keys": [
         {
           "label": "Tab",
@@ -57,7 +55,6 @@
       ]
     },
     {
-      "rowHeight": 50,
       "keys": [
         { "label": "q" },
         { "label": "w" },
@@ -72,7 +69,6 @@
       ]
     },
     {
-      "rowHeight": 50,
       "keys": [
         { "label": "a" },
         { "label": "s" },
@@ -87,7 +83,6 @@
       ]
     },
     {
-      "rowHeight": 50,
       "keys": [
         { "label": "z" },
         { "label": "x" },
@@ -102,11 +97,12 @@
       ]
     },
     {
-      "rowHeight": 40,
       "keys": [
         {
           "label": "shf",
           "keyCode": 59,
+          "smallLabel": "cap",
+          "keyCodeLongPress": 115,
           "keyWidth": 12,
           "isModifier": true
         },
@@ -126,12 +122,12 @@
           "label": " ",
           "keyCode": 62,
           "keyWidth": 29,
-          "keyHeight": 80,
+          "keyHeight": 90,
           "isRepeatable": true
         },
         {
-          "label": "edt",
-          "smallLabel": "emj",
+          "label": " ",
+          "smallLabel": " ",
           "keyCode": -1,
           "keyCodeLongPress": -1,
           "keyWidth": 12,
@@ -153,7 +149,6 @@
       ]
     },
     {
-      "rowHeight": 40,
       "keys": [
         {
           "label": "flt",
@@ -162,18 +157,19 @@
           "isModifier": true
         },
         {
-          "label": "cap",
-          "keyCode": 115,
+          "label": " ",
+          "keyCode": -1,
           "keyWidth": 12,
           "isModifier": true
         },
         {
-          "label": "lyt",
+          "label": "en",
+          "smallLabel": "var",
           "keyCode": -21,
           "keyCodeLongPress": -1,
           "keyWidth": 12,
           "isModifier": true,
-          "keyGap": 29.3
+          "keyGap": 29.2
         },
         {
           "label": "◀",

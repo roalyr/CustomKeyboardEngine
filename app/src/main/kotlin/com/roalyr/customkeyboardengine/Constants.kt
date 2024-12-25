@@ -40,15 +40,11 @@ class Constants {
         private const val LAYOUTS_LANGUAGE_NAME = "layouts-language"
         private const val LAYOUTS_SERVICE_NAME = "layouts-service"
 
-        val MEDIA_DIRECTORY: String
-            get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).parent}/Android/media/$APP_MEDIA_NAME"
-
         val MEDIA_LAYOUTS_LANGUAGE_DIRECTORY: String
             get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).parent}/Android/media/$APP_MEDIA_NAME/$LAYOUTS_DIRECTORY_NAME/$LAYOUTS_LANGUAGE_NAME"
 
         val MEDIA_LAYOUTS_SERVICE_DIRECTORY: String
             get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).parent}/Android/media/$APP_MEDIA_NAME/$LAYOUTS_DIRECTORY_NAME/$LAYOUTS_SERVICE_NAME"
-
 
     }
 
@@ -65,7 +61,6 @@ class Constants {
 
     object RequestCodes {
         const val STORAGE_PERMISSIONS = 1001
-        const val OVERLAY_PERMISSION = 1002
     }
 
 

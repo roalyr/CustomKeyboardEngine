@@ -10,7 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -19,6 +19,26 @@ class ActivityPermissionRequest : AppCompatActivity() {
 
     companion object {
         private const val TAG = "ActivityPermissionRequest"
+
+        // Launch specific permission request
+        fun startPermissionRequest(context: Context, permissionType: String) {
+            val intent = Intent(context, ActivityPermissionRequest::class.java).apply {
+                putExtra(Constants.PermissionTypes.EXTRA_TYPE, permissionType)
+            }
+            context.startActivity(intent)
+        }
+
+        fun checkAndRequestOverlayPermission(context: Context): Boolean {
+            return if (!Settings.canDrawOverlays(context)) {
+                val intent = Intent(context, ActivityPermissionRequest::class.java).apply {
+                    putExtra(Constants.PermissionTypes.EXTRA_TYPE, Constants.PermissionTypes.OVERLAY)
+                }
+                context.startActivity(intent)
+                false
+            } else {
+                true
+            }
+        }
 
         fun checkAndRequestStoragePermissions(context: Context): Boolean {
             return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
@@ -31,38 +51,37 @@ class ActivityPermissionRequest : AppCompatActivity() {
                         arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
                         Constants.RequestCodes.STORAGE_PERMISSIONS
                     )
-                    false // Permissions not yet granted
+                    false
                 } else {
-                    true // Permissions already granted
+                    true
                 }
             } else {
                 Log.i(TAG, "No explicit storage permissions required for Android 10+")
-                true // No permissions required for Android 10+
+                true
             }
         }
-
-        fun checkAndRequestOverlayPermission(context: Context): Boolean {
-            return if (!Settings.canDrawOverlays(context)) {
-                val intent = Intent(context, ActivityPermissionRequest::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    putExtra(Constants.PermissionTypes.EXTRA_TYPE, Constants.PermissionTypes.OVERLAY)
-                }
-                ContextCompat.startActivity(context, intent, null)
-                false // Overlay permission not yet granted
-            } else {
-                true // Overlay permission already granted
-            }
-        }
-
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val permissionType = intent.getStringExtra(Constants.PermissionTypes.EXTRA_TYPE)
         when (permissionType) {
-            Constants.PermissionTypes.STORAGE -> requestStoragePermissions()
             Constants.PermissionTypes.OVERLAY -> requestOverlayPermission()
+            Constants.PermissionTypes.STORAGE -> requestStoragePermissions()
+            else -> {
+                Log.e(TAG, "Unknown permission type: $permissionType")
+                Toast.makeText(this, "Unknown permission type.", Toast.LENGTH_SHORT).show()
+                finish()
+            }
         }
+    }
+
+    private fun requestOverlayPermission() {
+        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+            data = Uri.parse("package:$packageName")
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun requestStoragePermissions() {
@@ -72,39 +91,10 @@ class ActivityPermissionRequest : AppCompatActivity() {
                 arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
                 Constants.RequestCodes.STORAGE_PERMISSIONS
             )
-        }
-    }
-
-    // Register the Activity Result callback for overlay permission
-    private val overlayPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { _ ->
-            if (Settings.canDrawOverlays(this)) {
-                Log.i(TAG, "Overlay permission granted")
-            } else {
-                Log.e(TAG, "Overlay permission denied")
-            }
-            finish() // Finish the activity after handling the result
-        }
-
-    private fun requestOverlayPermission() {
-        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
-            data = Uri.parse("package:$packageName")
-        }
-        overlayPermissionLauncher.launch(intent)
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == Constants.RequestCodes.STORAGE_PERMISSIONS) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.i(TAG, "Storage permission granted")
-            } else {
-                Log.e(TAG, "Storage permission denied")
-            }
+        } else {
+            Log.i(TAG, "Storage permission not required for Android 10+")
+            Toast.makeText(this, "Storage permission not required for Android 10+.", Toast.LENGTH_SHORT).show()
+            finish()
         }
     }
 }

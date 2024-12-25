@@ -10,7 +10,7 @@
         android:pathData="M489,251L356,251 356,13 145,13 145,251 12,251 249,489 489,251 489,251Z"
         android:strokeLineJoin="round"
         android:strokeWidth="28.222"
-        android:fillColor="#BDBDBD"
+        android:fillColor="#FFFFFFFF"
         android:strokeColor="#00000000"
         android:fillType="evenOdd"/>
   </group>

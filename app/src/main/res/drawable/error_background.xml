@@ -1,6 +1,6 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <!-- Solid Background Color -->
-    <solid android:color="#FFCCCB" /> <!-- Light red background for errors -->
+    <solid android:color="#878787" /> <!-- Light red background for errors -->
 
     <!-- Rounded Corners -->
     <corners android:radius="16dp" />

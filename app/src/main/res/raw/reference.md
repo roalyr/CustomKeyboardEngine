@@ -5,6 +5,7 @@
 ## Folder Structure
 ```
 Android/media/com.roalyr.customkeyboardengine
+├── reference.md
 ├── layouts/
 │   ├── layouts-language/       # Language-specific layouts
 │   │   ├── keyboard-default.json

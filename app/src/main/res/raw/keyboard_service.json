@@ -7,55 +7,55 @@
     {
       "keys": [
         {
-          "label": "flt",
+          "icon": "@drawable/ic_anchor",
           "keyCode": -12,
           "isModifier": true,
           "keyWidth": 15
         },
         {
-          "icon": "drawable/reshot_icon_zoom_in",
+          "icon": "drawable/ic_zoom_in",
           "keyCode": -13,
           "isModifier": false,
           "isRepeatable": true
         },
         {
-          "icon": "drawable/reshot_icon_zoom_out",
+          "icon": "drawable/ic_zoom_out",
           "keyCode": -14,
           "isModifier": false,
           "isRepeatable": true
         },
         {
-          "icon": "drawable/reshot_icon_left_bold_arrow",
+          "icon": "drawable/ic_left_bold_arrow",
           "keyCode": -17,
           "isModifier": false,
           "isRepeatable": true
         },
         {
-          "icon": "drawable/reshot_icon_right_bold_arrow",
+          "icon": "drawable/ic_right_bold_arrow",
           "keyCode": -18,
           "isModifier": false,
           "isRepeatable": true
         },
         {
-          "icon": "drawable/reshot_icon_up_bold_arrow",
+          "icon": "drawable/ic_up_bold_arrow",
           "keyCode": -19,
           "isModifier": false,
           "isRepeatable": true
         },
         {
-          "icon": "drawable/reshot_icon_down_bold_arrow",
+          "icon": "drawable/ic_down_bold_arrow",
           "keyCode": -20,
           "isModifier": false,
           "isRepeatable": true
         },
         {
-          "icon": "drawable/reshot_icon_eye",
+          "icon": "drawable/ic_eye",
           "keyCode": -11,
           "isModifier": true,
           "keyWidth": 12
         },
         {
-          "icon": "drawable/reshot_icon_eye_disabled",
+          "icon": "drawable/ic_eye_disabled",
           "keyCode": -10,
           "isModifier": true,
           "keyWidth": 12

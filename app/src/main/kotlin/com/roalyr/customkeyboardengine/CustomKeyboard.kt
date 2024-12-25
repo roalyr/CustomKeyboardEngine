@@ -52,17 +52,8 @@ class CustomKeyboard(
     // Total logical width of the keyboard
     val totalLogicalWidth: Float
         get() {
-            var maxWidth = 0f
-            for (row in rows) {
-                var rowWidth = 0f
-                for (key in row.keys) {
-                    rowWidth += key.keyWidth ?: layout.defaultKeyWidth
-                }
-                if (rowWidth > maxWidth) {
-                    maxWidth = rowWidth
-                }
-            }
-            return maxWidth
+            // No need to make it variable.
+            return 100.0f
         }
 
     // Total logical height of the keyboard

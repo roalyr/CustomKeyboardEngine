@@ -7,10 +7,10 @@
     <clip-path
         android:pathData="M0,0h500v500h-500z"/>
     <path
-        android:pathData="M12,250L145,250 145,488 356,488 356,250 489,250 252,12 12,250 12,250Z"
+        android:pathData="M250,12L250,145 12,145 12,356 250,356 250,489 488,252 250,12 250,12Z"
         android:strokeLineJoin="round"
         android:strokeWidth="28.222"
-        android:fillColor="#BDBDBD"
+        android:fillColor="#FFFFFF"
         android:strokeColor="#00000000"
         android:fillType="evenOdd"/>
   </group>

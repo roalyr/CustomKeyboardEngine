@@ -1,14 +1,14 @@
 {
-  "defaultKeyWidth": 10,
+  "defaultKeyWidth": 9.1,
   "defaultKeyHeight": 45,
-  "defaultRowGap": 0.5,
-  "defaultKeyGap": 0.1,
+  "defaultRowGap": 3.0,
+  "defaultKeyGap": 1.0,
   "rows": [
     {
-      "defaultKeyWidth": 8.3,
+      "defaultKeyWidth": 7.4,
       "keys": [
         {
-          "label": "Esc",
+          "label": "Es",
           "keyCode": 111,
           "isModifier": true
         },
@@ -31,9 +31,10 @@
       ]
     },
     {
+      "defaultKeyWidth": 8.85,
       "keys": [
         {
-          "label": "Tab",
+          "icon": "@drawable/ic_tab",
           "keyCode": 61,
           "isModifier": true,
           "keyWidth": 15
@@ -46,7 +47,7 @@
         { "label": "-", "smallLabel": "_" },
         { "label": "=", "smallLabel": "+" },
         {
-          "icon": "@drawable/ic_clear_vector",
+          "icon": "@drawable/ic_backspace",
           "keyCode": 67,
           "isModifier": true,
           "isRepeatable": true,
@@ -103,39 +104,37 @@
           "keyCode": 59,
           "smallLabel": "cap",
           "keyCodeLongPress": 115,
-          "keyWidth": 12,
+          "keyWidth": 11,
           "isModifier": true
         },
         {
           "label": "ctl",
           "keyCode": 113,
-          "keyWidth": 12,
+          "keyWidth": 11,
           "isModifier": true
         },
         {
           "label": "alt",
           "keyCode": 57,
-          "keyWidth": 12,
+          "keyWidth": 11,
           "isModifier": true
         },
         {
-          "label": " ",
+          "label": "⎵",
           "keyCode": 62,
-          "keyWidth": 29,
-          "keyHeight": 90,
+          "keyWidth": 28,
+          "keyHeight": 93,
           "isRepeatable": true
         },
         {
-          "label": " ",
-          "smallLabel": " ",
+          "icon": "@drawable/ic_emoji",
           "keyCode": -1,
-          "keyCodeLongPress": -1,
-          "keyWidth": 12,
+          "keyWidth": 11,
           "isModifier": true
         },
         {
-          "label": "▲",
-          "keyWidth": 12,
+          "icon": "@drawable/ic_up_triangle_arrow",
+          "keyWidth": 11,
           "keyCode": 19,
           "isModifier": true,
           "isRepeatable": true
@@ -143,7 +142,7 @@
         {
           "label": "Ent",
           "keyCode": 66,
-          "keyWidth": 12,
+          "keyWidth": 11,
           "isModifier": true
         }
       ]
@@ -151,15 +150,15 @@
     {
       "keys": [
         {
-          "label": "flt",
+          "icon": "@drawable/ic_anchor",
           "keyCode": -12,
-          "keyWidth": 12,
+          "keyWidth": 11,
           "isModifier": true
         },
         {
-          "label": " ",
+          "icon": "@drawable/ic_clipboard",
           "keyCode": -1,
-          "keyWidth": 12,
+          "keyWidth": 11,
           "isModifier": true
         },
         {
@@ -167,27 +166,27 @@
           "smallLabel": "var",
           "keyCode": -21,
           "keyCodeLongPress": -1,
-          "keyWidth": 12,
+          "keyWidth": 11,
           "isModifier": true,
-          "keyGap": 29.2
+          "keyGap": 30
         },
         {
-          "label": "◀",
-          "keyWidth": 12,
+          "icon": "@drawable/ic_left_triangle_arrow",
+          "keyWidth": 11,
           "keyCode": 21,
           "isModifier": true,
           "isRepeatable": true
         },
         {
-          "label": "▼",
-          "keyWidth": 12,
+          "icon": "@drawable/ic_down_triangle_arrow",
+          "keyWidth": 11,
           "keyCode": 20,
           "isModifier": true,
           "isRepeatable": true
         },
         {
-          "label": "▶",
-          "keyWidth": 12,
+          "icon": "@drawable/ic_right_triangle_arrow",
+          "keyWidth": 11,
           "keyCode": 22,
           "isModifier": true,
           "isRepeatable": true

@@ -1,14 +1,18 @@
 package com.roalyr.customkeyboardengine
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
+import android.util.Log
 import android.util.TypedValue
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -347,9 +351,64 @@ class CustomKeyboardView @JvmOverloads constructor(
 
     ///////////////////////////////////////
     // DRAWING LOGIC
+
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val keyboard = keyboard ?: return
+
+        // Resolve accent color or fallback to a soft violet-purple
+        val accentColor = context.resolveThemeColor(android.R.attr.colorAccent, 0xFF6A5ACD.toInt()) // Soft purple fallback
+
+        // Dark Theme Colors
+        val keyboardBackgroundColorDark = adjustColor(accentColor, brightnessFactor = 0.2f, intensityFactor = 0.6f)
+        val keyModifierBackgroundColorDark = adjustColor(accentColor, brightnessFactor = 1.2f, intensityFactor = 0.7f)
+        val keyBackgroundColorDark = adjustColor(accentColor, brightnessFactor = 0.25f, intensityFactor = 0.4f)
+        val keyLabelTextColorDark = 0xFFCCCCCC.toInt()
+        val keySmallLabelTextColorDark = adjustColor(accentColor, brightnessFactor = 1.4f, intensityFactor = 0.9f)
+        val keyIconColorDark = keyLabelTextColorDark
+        // For now let it be the same as background.
+        val keyModifierIconColorDark = keyboardBackgroundColorDark
+        val keyModifierLabelTextColorDark = keyboardBackgroundColorDark
+        val keyModifierSmallLabelTextColorDark = keyboardBackgroundColorDark
+
+        // Bright Theme Colors
+        val keyboardBackgroundColorBright = adjustColor(accentColor, brightnessFactor = 0.99f, intensityFactor = 0.2f) // Very light muted background
+        val keyModifierBackgroundColorBright = adjustColor(accentColor, brightnessFactor = 1.0f, intensityFactor = 1.0f) // Desaturated
+        val keyBackgroundColorBright = adjustColor(accentColor, brightnessFactor = 1.0f, intensityFactor = 0.1f) // Almost white
+        val keyLabelTextColorBright = 0xFF333333.toInt()
+        val keySmallLabelTextColorBright = adjustColor(accentColor, brightnessFactor = 0.95f, intensityFactor = 1.0f) // Darker accent for small labels
+        val keyIconColorBright = keyLabelTextColorBright
+        // For now let it be the same as background.
+        val keyModifierIconColorBright = keyboardBackgroundColorBright
+        val keyModifierLabelTextColorBright = keyboardBackgroundColorBright
+        val keyModifierSmallLabelTextColorBright = keyboardBackgroundColorBright
+
+        // Determine theme and final colors
+        val isDarkTheme = try {
+            (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        } catch (e: Exception) {
+            Log.w("ThemeDetection", "Failed to detect UI mode, falling back to light theme.")
+            true // Fallback to dark theme
+        }
+
+        val keyboardBackgroundColor = if (isDarkTheme) keyboardBackgroundColorDark else keyboardBackgroundColorBright
+        val keyModifierBackgroundColor = if (isDarkTheme) keyModifierBackgroundColorDark else keyModifierBackgroundColorBright
+        val keyBackgroundColor = if (isDarkTheme) keyBackgroundColorDark else keyBackgroundColorBright
+        val keyLabelTextColor = if (isDarkTheme) keyLabelTextColorDark else keyLabelTextColorBright
+        val keySmallLabelTextColor = if (isDarkTheme) keySmallLabelTextColorDark else keySmallLabelTextColorBright
+        val keyIconColor = if (isDarkTheme) keyIconColorDark else keyIconColorBright
+        // TODO
+        val keyModifierIconColor = if (isDarkTheme) keyModifierIconColorDark else keyModifierIconColorBright
+        val keyModifierLabelTextColor = if (isDarkTheme) keyModifierLabelTextColorDark else keyModifierLabelTextColorBright
+        val keyModifierSmallLabelTextColor = if (isDarkTheme) keyModifierSmallLabelTextColorDark else keyModifierSmallLabelTextColorBright
+
+
+
+
+        // Draw the underlying background
+        paint.color = keyboardBackgroundColor
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
 
         val totalWidth = width.toFloat() // Screen width
         val scaleX = totalWidth / keyboard.totalLogicalWidth
@@ -376,13 +435,12 @@ class CustomKeyboardView @JvmOverloads constructor(
                 // Key bounds for drawing
                 val keyBounds = RectF(keyX, keyY, keyX + keyWidth, keyY + keyHeight)
 
-                // Draw the key background
-                paint.color = if (key.isModifier == true) keyModifierBackgroundColor else keyBackgroundColor
-                canvas.drawRect(keyBounds, paint)
+                // Define the corner radius (adjust as needed)
+                val cornerRadius = keyHeight * 0.1f
 
-                // --- Draw key background ---
+                // Draw the rounded key background
                 paint.color = if (key.isModifier == true) keyModifierBackgroundColor else keyBackgroundColor
-                canvas.drawRect(keyBounds, paint)
+                canvas.drawRoundRect(keyBounds, cornerRadius, cornerRadius, paint)
 
                 // --- Draw icon if present ---
                 key.icon?.let { iconName ->
@@ -392,6 +450,14 @@ class CustomKeyboardView @JvmOverloads constructor(
                         val iconLeft = keyX.toInt() + ((keyWidth - iconSize) / 2).toInt()
                         val iconTop = keyY.toInt() + ((keyHeight - iconSize) / 2).toInt()
                         it.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize)
+
+                        // Modulate the icon color by setting a color filter directly on the drawable
+                        it.colorFilter = PorterDuffColorFilter(
+                            if (key.isModifier == true) keyModifierIconColor else keyIconColor,
+                            PorterDuff.Mode.SRC_IN
+                        )
+
+                        // Draw the drawable
                         it.draw(canvas)
                     }
                 } ?: run {
@@ -399,8 +465,8 @@ class CustomKeyboardView @JvmOverloads constructor(
                     if (key.smallLabel != null) {
                         // --- Draw small label (secondary text) ---
                         key.smallLabel.let {
-                            paint.color = keySmallTextColor
-                            paint.textSize = keyHeight * 0.3f
+                            paint.color = if (key.isModifier == true) keyModifierSmallLabelTextColor else keySmallLabelTextColor
+                            paint.textSize = keyHeight * 0.32f
                             paint.textAlign = Paint.Align.CENTER
 
                             // Transform the small label dynamically based on meta states
@@ -419,8 +485,8 @@ class CustomKeyboardView @JvmOverloads constructor(
 
                         // --- Draw primary label (main text) ---
                         key.label?.let {
-                            paint.color = keyTextColor
-                            paint.textSize = keyHeight * 0.35f
+                            paint.color = if (key.isModifier == true) keyModifierLabelTextColor else keyLabelTextColor
+                            paint.textSize = keyHeight * 0.37f
                             paint.textAlign = Paint.Align.CENTER
 
                             // Transform the label dynamically based on meta states
@@ -439,8 +505,8 @@ class CustomKeyboardView @JvmOverloads constructor(
                     } else {
                         // --- Draw primary label only (centered) ---
                         key.label?.let {
-                            paint.color = keyTextColor
-                            paint.textSize = keyHeight * 0.4f
+                            paint.color = if (key.isModifier == true) keyModifierLabelTextColor else keyLabelTextColor
+                            paint.textSize = if (key.isModifier == true) keyHeight * 0.4f else keyHeight * 0.5f
                             paint.textAlign = Paint.Align.CENTER
 
                             // Transform the label dynamically based on meta states
@@ -466,6 +532,38 @@ class CustomKeyboardView @JvmOverloads constructor(
 
             // Increment Y for the next row
             currentY += rowHeight + (row.rowGap?.times(scaleY) ?: 0f)
+        }
+    }
+
+    // Adjust Color Method
+    private fun adjustColor(color: Int, brightnessFactor: Float, intensityFactor: Float): Int {
+        val alpha = color shr 24 and 0xFF
+        val red = color shr 16 and 0xFF
+        val green = color shr 8 and 0xFF
+        val blue = color and 0xFF
+
+        // Adjust intensity (blend with white)
+        val blendedRed = (red + (255 - red) * (1 - intensityFactor)).toInt()
+        val blendedGreen = (green + (255 - green) * (1 - intensityFactor)).toInt()
+        val blendedBlue = (blue + (255 - blue) * (1 - intensityFactor)).toInt()
+
+        // Adjust brightness
+        val adjustedRed = (blendedRed * brightnessFactor).coerceIn(0f, 255f).toInt()
+        val adjustedGreen = (blendedGreen * brightnessFactor).coerceIn(0f, 255f).toInt()
+        val adjustedBlue = (blendedBlue * brightnessFactor).coerceIn(0f, 255f).toInt()
+
+        return (alpha shl 24) or (adjustedRed shl 16) or (adjustedGreen shl 8) or adjustedBlue
+    }
+
+    // Extension to resolve theme color
+    private fun Context.resolveThemeColor(attr: Int, fallbackColor: Int): Int {
+        val typedValue = TypedValue()
+        val resolved = theme.resolveAttribute(attr, typedValue, true)
+        return if (resolved) {
+            typedValue.data
+        } else {
+            Log.w("ThemeResolution", "Failed to resolve attribute: $attr. Using fallback color.")
+            fallbackColor
         }
     }
 

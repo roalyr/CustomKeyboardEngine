@@ -59,7 +59,8 @@ class CustomKeyboardService : InputMethodService() {
 
     override fun onCreate() {
         initWindowManager()
-        ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(windowManager, this, resources)
+        // Disabled to be done on demand manually.
+        // ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(windowManager, this, resources)
         super.onCreate()
     }
 
@@ -613,8 +614,10 @@ class CustomKeyboardService : InputMethodService() {
     private fun reloadKeyboardLayouts() {
         Log.i(TAG, "Reloading all keyboard layouts.")
 
+        // Disabled to be called on demand manually.
+        // ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(windowManager, this, resources)
+
         // Clear existing layouts
-        ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(windowManager, this, resources)
         languageLayouts.clear()
         serviceLayouts.clear()
 

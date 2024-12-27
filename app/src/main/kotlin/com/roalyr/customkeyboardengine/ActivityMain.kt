@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -87,6 +88,14 @@ class ActivityMain : ComponentActivity() {
                             shape = MaterialTheme.shapes.medium
                         ) {
                             Text("3. Change Input Method")
+                        }
+
+                        Button(
+                            onClick = { copyDefaults() },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Text("4. Copy (rewrite) default layouts and reference manual to working folder")
                         }
 
                         // Path Reference
@@ -189,5 +198,11 @@ class ActivityMain : ComponentActivity() {
         val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         startActivity(intent)
+    }
+
+    private fun copyDefaults() {
+        if (ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(windowManager, this, resources)){
+            Toast.makeText(this, "Default layouts and reference copied", Toast.LENGTH_SHORT).show()
+        }
     }
 }

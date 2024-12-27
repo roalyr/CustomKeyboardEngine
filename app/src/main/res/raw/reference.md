@@ -17,64 +17,67 @@ Android/media/com.roalyr.customkeyboardengine
 ```
 
 ---
-
 ## JSON Layout Attributes
 
-Attributes with type defined with question mark (i.e. Float?) are optional and are set to fallback to previous level
-(Key -> Row -> KeyboardLayout).
+Attributes with types defined with a question mark (e.g., `Float?`) are optional and will fallback to the previous level of defaults:
+(Key → Row → KeyboardLayout).
 
-### 1. **KeyboardLayout**
+---
+
+### 1.KeyboardLayout
+
 The root object of the layout file.
 
-| Attribute            | Type          | Description                                         |
-|----------------------|---------------|-----------------------------------------------------|
-| `rows`               | List<Row>     | List of rows that contain the keyboard keys.        |
-| `defaultKeyHeight`   | Float         | Default key height (in DP).                         |
-| `defaultKeyWidth`    | Float         | Default key width (percentage of layout width).     |
-| `defaultRowGap`      | Float         | Default gap between rows (in DP).                   |
-| `defaultKeyGap`      | Float         | Default gap between keys (percentage of row width). |
+| Attribute              | Type        | Description                                                  |
+|------------------------|-------------|--------------------------------------------------------------|
+| `rows`                 | List<Row>   | List of rows containing the keyboard keys.                   |
+| `defaultKeyHeight`     | Float       | Default key height (in DP).                                  |
+| `defaultKeyWidth`      | Float       | Default key width (percentage of layout width).              |
+| `defaultLogicalRowGap` | Float       | Default gap between rows (in DP).                            |
+| `defaultLogicalKeyGap` | Float       | Default gap between keys (percentage of row width).          |
 
 ---
 
-### 2. **Row**
+### 2.Row
+
 Defines a row in the keyboard.
 
-| Attribute            | Type          | Description                                        |
-|----------------------|---------------|----------------------------------------------------|
-| `keys`               | List<Key>     | List of keys in this row.                          |
-| `rowHeight`          | Float?        | Height of the row (fallback to `defaultKeyHeight`).|
-| `rowGap`             | Float?        | Space below this row (in DP).                      |
-| `defaultKeyWidth`    | Float?        | Default width for keys in this row (percentage).   |
-| `defaultKeyGap`      | Float?        | Default gap for keys in this row (percentage).     |
+| Attribute               | Type        | Description                                                                           |
+|-------------------------|-------------|---------------------------------------------------------------------------------------|
+| `keys`                  | List<Key>   | List of keys in this row.                                                             |
+| `logicalRowGap`         | Float?      | Space below this row (fallback to `KeyboardLayout.defaultLogicalRowGap`).             |
+| `defaultKeyHeight`      | Float?      | Height of the row (fallback to `KeyboardLayout.defaultKeyHeight`).                    |
+| `defaultKeyWidth`       | Float?      | Default width for keys in this row (fallback to `KeyboardLayout.defaultKeyWidth`).    |
+| `defaultLogicalKeyGap`  | Float?      | Default gap for keys in this row (fallback to `KeyboardLayout.defaultLogicalKeyGap`). |
 
 ---
 
-### 3. **Key**
+### 3.Key
+
 Defines individual key attributes.
 
-| Attribute                | Type          | Description                                                                               |
-|--------------------------|---------------|-------------------------------------------------------------------------------------------|
-| `keyCode`                | Int?          | Primary key code (if not defined, key will commit its label.                              |
-| `keyCodeLongPress`       | Int?          | Key code triggered on long press.                                                         |
-| `isRepeatable`           | Boolean?      | If true, the key repeats when held.                                                       |
-| `isModifier`             | Boolean?      | If true, the key is painted as modifier (Shift, Tab, Esc, etc).                           |
-| `preserveLabelCase`      | Boolean?      | If true, do not change key label case (on Shift or Caps Lock).                            |
-| `preserveSmallLabelCase` | Boolean?      | If true, do not change small label case (e.g., Shift or Caps Lock).                       |
-| `label`                  | String?       | Primary text label on the key.                                                            |
-| `smallLabel`             | String?       | Small secondary label.                                                                    |
-| `icon`                   | String?       | Path to the key's drawable icon (e.g., @drawable/icon_name, nullable).                    |
-| `keyWidth`               | Float?        | Width of the key (fallback to `Row.defaultKeyWidth` or `KeyboardLayout.defaultKeyWidth`). |
-| `keyHeight`              | Float?        | Height of the key (fallback to `Row.rowHeight` or `KeyboardLayout.defaultKeyHeight`).     |
-| `keyGap`                 | Float?        | Gap to the next key (fallback to gap defaults).                                           |
-| `x`                      | Float         | Logical X position (calculated automatically, do not set).                                |
-| `y`                      | Float         | Logical Y position (calculated automatically, do not set).                                |
+| Attribute                | Type        | Description                                                                                  |
+|--------------------------|-------------|----------------------------------------------------------------------------------------------|
+| `keyCode`                | Int?        | Primary key code (if not defined, the key will commit its label).                            |
+| `keyCodeLongPress`       | Int?        | Key code triggered on long press.                                                            |
+| `label`                  | String?     | Primary text label on the key.                                                               |
+| `labelLongPress`         | String?     | Small secondary label shown on long press.                                                   |
+| `icon`                   | String?     | Path to the key's drawable icon (e.g., `@drawable/icon_name`).                               |
+| `keyWidth`               | Float?      | Width of the key (fallback to `Row.defaultKeyWidth` or `KeyboardLayout.defaultKeyWidth`).    |
+| `keyHeight`              | Float?      | Height of the key (fallback to `Row.defaultKeyHeight` or `KeyboardLayout.defaultKeyHeight`). |
+| `logicalKeyGap`          | Float?      | Gap to the next key (fallback to gap defaults).                                              |
+| `isRepeatable`           | Boolean?    | If true, the key repeats when held.                                                          |
+| `isModifier`             | Boolean?    | If true, the key is painted as a modifier (Shift, Tab, Esc, etc.).                           |
+| `preserveLabelCase`      | Boolean?    | If true, do not change key label case (on Shift or Caps Lock).                               |
+| `preserveSmallLabelCase` | Boolean?    | If true, do not change small label case (e.g., Shift or Caps Lock).                          |
+| `x`                      | Float       | Logical X position (calculated automatically, do not set).                                   |
+| `y`                      | Float       | Logical Y position (calculated automatically, do not set).                                   |
 
 ---
 
 ## Available Icons
 
 An example of declaring a key icon: `"icon": "@drawable/ic_tab"`
-
 
 | File Name                       | Icon description                |
 |---------------------------------|---------------------------------|

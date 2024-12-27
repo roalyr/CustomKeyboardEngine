@@ -1,8 +1,6 @@
 {
   "defaultKeyWidth": 10,
   "defaultKeyHeight": 35,
-  "defaultRowGap": 0.5,
-  "defaultKeyGap": 0.1,
   "rows": [
     {
       "keys": [
@@ -10,7 +8,7 @@
           "icon": "@drawable/ic_anchor",
           "keyCode": -12,
           "isModifier": true,
-          "keyWidth": 15
+          "keyWidth": 13.333
         },
         {
           "icon": "drawable/ic_zoom_in",
@@ -52,13 +50,13 @@
           "icon": "drawable/ic_eye",
           "keyCode": -11,
           "isModifier": true,
-          "keyWidth": 12
+          "keyWidth": 13.333
         },
         {
           "icon": "drawable/ic_eye_disabled",
           "keyCode": -10,
           "isModifier": true,
-          "keyWidth": 12
+          "keyWidth": 13.333
         }
       ]
     }

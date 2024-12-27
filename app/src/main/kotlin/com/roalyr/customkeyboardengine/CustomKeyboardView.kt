@@ -169,7 +169,7 @@ class CustomKeyboardView @JvmOverloads constructor(
 
     private fun handleLongPress(key: Key) {
         isLongPressHandled = true
-        keyboardActionListener?.onKey(key.keyCodeLongPress, key.smallLabel)
+        keyboardActionListener?.onKey(key.keyCodeLongPress, key.labelLongPress)
     }
 
     private fun scheduleLongPress(key: Key) {
@@ -290,7 +290,7 @@ class CustomKeyboardView @JvmOverloads constructor(
         var totalHeight = 0f
 
         keyboard.rows.forEach { row ->
-            val rowHeight = row.rowHeight ?: keyboard.defaultKeyHeight
+            val rowHeight = row.defaultKeyHeight ?: Constants.DEFAULT_KEY_HEIGHT
             totalHeight += rowHeight.toPx(context)
         }
 
@@ -351,8 +351,6 @@ class CustomKeyboardView @JvmOverloads constructor(
 
     ///////////////////////////////////////
     // DRAWING LOGIC
-
-
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val keyboard = keyboard ?: return
@@ -360,85 +358,64 @@ class CustomKeyboardView @JvmOverloads constructor(
         // Resolve accent color or fallback to a soft violet-purple
         val accentColor = context.resolveThemeColor(android.R.attr.colorAccent, 0xFF6A5ACD.toInt()) // Soft purple fallback
 
-        // Dark Theme Colors
-        val keyboardBackgroundColorDark = adjustColor(accentColor, brightnessFactor = 0.2f, intensityFactor = 0.6f)
-        val keyModifierBackgroundColorDark = adjustColor(accentColor, brightnessFactor = 1.2f, intensityFactor = 0.7f)
-        val keyBackgroundColorDark = adjustColor(accentColor, brightnessFactor = 0.25f, intensityFactor = 0.4f)
-        val keyLabelTextColorDark = 0xFFCCCCCC.toInt()
-        val keySmallLabelTextColorDark = adjustColor(accentColor, brightnessFactor = 1.4f, intensityFactor = 0.9f)
-        val keyIconColorDark = keyLabelTextColorDark
-        // For now let it be the same as background.
-        val keyModifierIconColorDark = keyboardBackgroundColorDark
-        val keyModifierLabelTextColorDark = keyboardBackgroundColorDark
-        val keyModifierSmallLabelTextColorDark = keyboardBackgroundColorDark
-
-        // Bright Theme Colors
-        val keyboardBackgroundColorBright = adjustColor(accentColor, brightnessFactor = 0.99f, intensityFactor = 0.2f) // Very light muted background
-        val keyModifierBackgroundColorBright = adjustColor(accentColor, brightnessFactor = 1.0f, intensityFactor = 1.0f) // Desaturated
-        val keyBackgroundColorBright = adjustColor(accentColor, brightnessFactor = 1.0f, intensityFactor = 0.1f) // Almost white
-        val keyLabelTextColorBright = 0xFF333333.toInt()
-        val keySmallLabelTextColorBright = adjustColor(accentColor, brightnessFactor = 0.95f, intensityFactor = 1.0f) // Darker accent for small labels
-        val keyIconColorBright = keyLabelTextColorBright
-        // For now let it be the same as background.
-        val keyModifierIconColorBright = keyboardBackgroundColorBright
-        val keyModifierLabelTextColorBright = keyboardBackgroundColorBright
-        val keyModifierSmallLabelTextColorBright = keyboardBackgroundColorBright
-
-        // Determine theme and final colors
+        // Define colors based on theme
         val isDarkTheme = try {
             (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         } catch (e: Exception) {
-            Log.w("ThemeDetection", "Failed to detect UI mode, falling back to light theme.")
+            Log.w("ThemeDetection", "Failed to detect UI mode, falling back to dark theme.")
             true // Fallback to dark theme
         }
 
-        val keyboardBackgroundColor = if (isDarkTheme) keyboardBackgroundColorDark else keyboardBackgroundColorBright
-        val keyModifierBackgroundColor = if (isDarkTheme) keyModifierBackgroundColorDark else keyModifierBackgroundColorBright
-        val keyBackgroundColor = if (isDarkTheme) keyBackgroundColorDark else keyBackgroundColorBright
-        val keyLabelTextColor = if (isDarkTheme) keyLabelTextColorDark else keyLabelTextColorBright
-        val keySmallLabelTextColor = if (isDarkTheme) keySmallLabelTextColorDark else keySmallLabelTextColorBright
-        val keyIconColor = if (isDarkTheme) keyIconColorDark else keyIconColorBright
-        // TODO
-        val keyModifierIconColor = if (isDarkTheme) keyModifierIconColorDark else keyModifierIconColorBright
-        val keyModifierLabelTextColor = if (isDarkTheme) keyModifierLabelTextColorDark else keyModifierLabelTextColorBright
-        val keyModifierSmallLabelTextColor = if (isDarkTheme) keyModifierSmallLabelTextColorDark else keyModifierSmallLabelTextColorBright
+        val keyboardBackgroundColor = if (isDarkTheme) adjustColor(accentColor, 0.2f, 0.6f) else adjustColor(accentColor, 0.99f, 0.2f)
+        val keyBackgroundColor = if (isDarkTheme) adjustColor(accentColor, 0.25f, 0.4f) else adjustColor(accentColor, 1.0f, 0.1f)
+        val keyModifierBackgroundColor = if (isDarkTheme) adjustColor(accentColor, 1.2f, 0.7f) else adjustColor(accentColor, 1.0f, 1.0f)
+        val keyLabelTextColor = if (isDarkTheme) 0xFFCCCCCC.toInt() else 0xFF333333.toInt()
+        val keyLabelLongPressTextColor = if (isDarkTheme) adjustColor(accentColor, 1.4f, 0.9f) else adjustColor(accentColor, 0.95f, 1.0f)
+
+        // Keep those values the same as text or background colors.
+        val keyIconColor = keyLabelTextColor
+        val keyModifierIconColor = keyboardBackgroundColor
+        val keyModifierLabelTextColor = keyboardBackgroundColor
+        val keyModifierSmallLabelTextColor = keyboardBackgroundColor
 
 
-
-
-        // Draw the underlying background
+        // Draw keyboard background
         paint.color = keyboardBackgroundColor
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
 
-        val totalWidth = width.toFloat() // Screen width
-        val scaleX = totalWidth / keyboard.totalLogicalWidth
+        // Scaling factors
+        val scaleX = width.toFloat() / keyboard.totalLogicalWidth
         val scaleY = height.toFloat() / keyboard.totalLogicalHeight
+
+        // Rendered gaps
+        val renderedKeyGap = 5f // Adjust horizontal gap in px
+        val renderedRowGap = 5f // Adjust vertical gap in px
 
         var currentY = 0f
 
         keyboard.rows.forEach { row ->
-            val rowHeight = row.rowHeight?.times(scaleY) ?: (Constants.DEFAULT_KEY_HEIGHT * scaleY)
-            val defaultKeyWidth = row.defaultKeyWidth?.times(scaleX) ?: (Constants.DEFAULT_KEY_WIDTH * scaleX)
+            val rowHeight = row.defaultKeyHeight?.times(scaleY) ?: (Constants.DEFAULT_KEY_HEIGHT * scaleY)
+            val logicalRowGap = row.logicalRowGap?.times(scaleY) ?: (Constants.DEFAULT_LOGICAL_ROW_GAP * scaleY)
             var currentX = 0f
 
             row.keys.forEach { key ->
-                // Resolve key-specific height, fallback to row height
-                val keyHeight = key.keyHeight?.times(scaleY) ?: rowHeight
+                val logicalKeyWidth = key.keyWidth?.times(scaleX) ?: (row.defaultKeyWidth?.times(scaleX) ?: (Constants.DEFAULT_KEY_WIDTH * scaleX))
+                val logicalKeyHeight = key.keyHeight?.times(scaleY) ?: rowHeight
+                val logicalKeyGap = key.logicalKeyGap?.times(scaleX) ?: (row.defaultLogicalKeyGap?.times(scaleX) ?: (Constants.DEFAULT_LOGICAL_KEY_GAP * scaleX))
 
-                // Resolve key-specific width, fallback to row default
-                val keyWidth = key.keyWidth?.times(scaleX) ?: defaultKeyWidth
+                // Adjust for rendered gaps
+                val rectKeyX = currentX + renderedKeyGap / 2
+                val rectKeyY = currentY + renderedRowGap / 2
+                val rectKeyWidth = logicalKeyWidth - renderedKeyGap
+                val rectKeyHeight = logicalKeyHeight - renderedRowGap
 
-                // Key position
-                val keyX = currentX
-                val keyY = currentY // Align with row baseline; do not adjust upwards
+                // Define key bounds
+                val keyBounds = RectF(rectKeyX, rectKeyY, rectKeyX + rectKeyWidth, rectKeyY + rectKeyHeight)
 
-                // Key bounds for drawing
-                val keyBounds = RectF(keyX, keyY, keyX + keyWidth, keyY + keyHeight)
+                // Define corner radius
+                val cornerRadius = rectKeyHeight * 0.1f
 
-                // Define the corner radius (adjust as needed)
-                val cornerRadius = keyHeight * 0.1f
-
-                // Draw the rounded key background
+                // Draw key background
                 paint.color = if (key.isModifier == true) keyModifierBackgroundColor else keyBackgroundColor
                 canvas.drawRoundRect(keyBounds, cornerRadius, cornerRadius, paint)
 
@@ -446,9 +423,10 @@ class CustomKeyboardView @JvmOverloads constructor(
                 key.icon?.let { iconName ->
                     val drawable = getIconDrawable(iconName)
                     drawable?.let {
-                        val iconSize = (keyHeight * 0.6f).toInt()
-                        val iconLeft = keyX.toInt() + ((keyWidth - iconSize) / 2).toInt()
-                        val iconTop = keyY.toInt() + ((keyHeight - iconSize) / 2).toInt()
+                        // TODO: add key icon / label size overrides
+                        val iconSize = (rectKeyHeight * 0.6f).toInt()
+                        val iconLeft = rectKeyX.toInt() + ((rectKeyWidth - iconSize) / 2).toInt()
+                        val iconTop = rectKeyY.toInt() + ((rectKeyHeight - iconSize) / 2).toInt()
                         it.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize)
 
                         // Modulate the icon color by setting a color filter directly on the drawable
@@ -462,11 +440,11 @@ class CustomKeyboardView @JvmOverloads constructor(
                     }
                 } ?: run {
                     // Check if small label exists
-                    if (key.smallLabel != null) {
+                    if (key.labelLongPress != null) {
                         // --- Draw small label (secondary text) ---
-                        key.smallLabel.let {
-                            paint.color = if (key.isModifier == true) keyModifierSmallLabelTextColor else keySmallLabelTextColor
-                            paint.textSize = keyHeight * 0.32f
+                        key.labelLongPress.let {
+                            paint.color = if (key.isModifier == true) keyModifierSmallLabelTextColor else keyLabelLongPressTextColor
+                            paint.textSize = rectKeyHeight * 0.32f
                             paint.textAlign = Paint.Align.CENTER
 
                             // Transform the small label dynamically based on meta states
@@ -477,7 +455,7 @@ class CustomKeyboardView @JvmOverloads constructor(
                                 canvas.drawText(
                                     renderedSmallLabel,
                                     keyBounds.centerX(),
-                                    keyBounds.top + keyHeight * 0.35f, // Upper half position
+                                    keyBounds.top + rectKeyHeight * 0.35f, // Upper half position
                                     paint
                                 )
                             }
@@ -486,7 +464,7 @@ class CustomKeyboardView @JvmOverloads constructor(
                         // --- Draw primary label (main text) ---
                         key.label?.let {
                             paint.color = if (key.isModifier == true) keyModifierLabelTextColor else keyLabelTextColor
-                            paint.textSize = keyHeight * 0.37f
+                            paint.textSize = rectKeyHeight * 0.37f
                             paint.textAlign = Paint.Align.CENTER
 
                             // Transform the label dynamically based on meta states
@@ -497,7 +475,7 @@ class CustomKeyboardView @JvmOverloads constructor(
                                 canvas.drawText(
                                     renderedLabel,
                                     keyBounds.centerX(),
-                                    keyBounds.centerY() + keyHeight * 0.3f, // Slightly lower in the middle half
+                                    keyBounds.centerY() + rectKeyHeight * 0.3f, // Slightly lower in the middle half
                                     paint
                                 )
                             }
@@ -506,7 +484,7 @@ class CustomKeyboardView @JvmOverloads constructor(
                         // --- Draw primary label only (centered) ---
                         key.label?.let {
                             paint.color = if (key.isModifier == true) keyModifierLabelTextColor else keyLabelTextColor
-                            paint.textSize = if (key.isModifier == true) keyHeight * 0.4f else keyHeight * 0.5f
+                            paint.textSize = if (key.isModifier == true) rectKeyHeight * 0.4f else rectKeyHeight * 0.5f
                             paint.textAlign = Paint.Align.CENTER
 
                             // Transform the label dynamically based on meta states
@@ -525,13 +503,12 @@ class CustomKeyboardView @JvmOverloads constructor(
                     }
                 }
 
-
-                // Increment X for next key
-                currentX += keyWidth + (key.keyGap?.times(scaleX) ?: 0f)
+                // Increment X for the next key
+                currentX += logicalKeyWidth + logicalKeyGap
             }
 
             // Increment Y for the next row
-            currentY += rowHeight + (row.rowGap?.times(scaleY) ?: 0f)
+            currentY += rowHeight + logicalRowGap
         }
     }
 
@@ -615,7 +592,7 @@ class CustomKeyboardView @JvmOverloads constructor(
     private fun updateSmallLabelState(key: Key): String? {
         // If preserveSmallLabelCase is true, return the small label as is.
         if (key.preserveSmallLabelCase == true) {
-            return key.smallLabel
+            return key.labelLongPress
         }
 
         val isMetaKeyToggled = key.keyCodeLongPress?.let { isMetaKeyToggled(it) } ?: false
@@ -623,27 +600,27 @@ class CustomKeyboardView @JvmOverloads constructor(
         return when {
             key.keyCodeLongPress in metaKeyCodes && isMetaKeyToggled -> {
                 // For meta keys (CAP, CTRL, SHIFT, ALT) toggled on, use uppercase.
-                key.smallLabel?.uppercase()
+                key.labelLongPress?.uppercase()
             }
             key.keyCodeLongPress in metaKeyCodes && !isMetaKeyToggled -> {
                 // For meta keys toggled off, use lowercase.
-                key.smallLabel?.lowercase()
+                key.labelLongPress?.lowercase()
             }
             key.isModifier == true && key.keyCodeLongPress !in metaKeyCodes -> {
                 // Modifier keys not in meta keys list (like Esc, Ent, Tab) retain their small label.
-                key.smallLabel
+                key.labelLongPress
             }
             key.isModifier == false && (isShiftOn || isCapsLockOn) -> {
                 // Non-modifier keys (ordinary characters) shift to uppercase when Shift or Caps Lock is active.
-                key.smallLabel?.uppercase()
+                key.labelLongPress?.uppercase()
             }
             key.isModifier == false -> {
                 // Non-modifier keys (ordinary characters) shift to lowercase when Shift and Caps Lock are inactive.
-                key.smallLabel?.lowercase()
+                key.labelLongPress?.lowercase()
             }
             else -> {
                 // Default case for any other keys, retain the original small label.
-                key.smallLabel
+                key.labelLongPress
             }
         }
     }

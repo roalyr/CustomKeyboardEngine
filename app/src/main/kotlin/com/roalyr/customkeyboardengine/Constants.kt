@@ -31,10 +31,11 @@ class Constants {
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN = -20
         const val KEYCODE_CYCLE_LANGUAGE_LAYOUT = -21
         // Default values.
-        const val DEFAULT_KEY_HEIGHT = 40f
-        const val DEFAULT_KEY_WIDTH = 10f
-        const val DEFAULT_ROW_GAP = 1f
-        const val DEFAULT_KEY_GAP = 1f
+        const val DEFAULT_KEY_HEIGHT = 40f // Logical DP
+        const val DEFAULT_KEY_WIDTH = 10f  // Percentage of row width
+        const val DEFAULT_LOGICAL_ROW_GAP = 0f // Logical DP
+        const val DEFAULT_LOGICAL_KEY_GAP = 0f // Percentage of row width
+        const val TOTAL_LOGICAL_WIDTH = 100f
 
         // Paths
         const val APP_MEDIA_NAME = "com.roalyr.customkeyboardengine"

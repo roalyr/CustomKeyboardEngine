@@ -9,93 +9,92 @@ import java.io.File
 @Serializable
 data class KeyboardLayout(
     val rows: List<Row>,
-    val defaultKeyHeight: Float = Constants.DEFAULT_KEY_HEIGHT,     // Absolute value in DP
-    val defaultKeyWidth: Float = Constants.DEFAULT_KEY_WIDTH,      // Percentage of row width
-    val defaultRowGap: Float = Constants.DEFAULT_ROW_GAP,         // Absolute value in DP (space between rows)
-    val defaultKeyGap: Float = Constants.DEFAULT_KEY_GAP          // Percentage of row width (space between keys)
+    val defaultKeyHeight: Float = Constants.DEFAULT_KEY_HEIGHT, // Absolute logical DP
+    val defaultKeyWidth: Float = Constants.DEFAULT_KEY_WIDTH,  // Percentage of row width
+    val defaultLogicalRowGap: Float = Constants.DEFAULT_LOGICAL_ROW_GAP, // Absolute logical DP
+    val defaultLogicalKeyGap: Float = Constants.DEFAULT_LOGICAL_KEY_GAP  // Percentage of row width
 )
 
 @Serializable
 data class Row(
     val keys: List<Key>,
-    val rowHeight: Float? = null,         // Row-specific height, fallback to KeyboardLayout.defaultKeyHeight
-    val rowGap: Float? = null,            // Space below this row, fallback to KeyboardLayout.defaultRowGap
-    val defaultKeyWidth: Float? = null,   // Default width for keys in this row, fallback to KeyboardLayout.defaultKeyWidth
-    val defaultKeyGap: Float? = null      // Default gap for keys in this row, fallback to KeyboardLayout.defaultKeyGap
+    val logicalRowGap: Float? = null, // Overrides KeyboardLayout.defaultLogicalRowGap for this row
+    val defaultKeyHeight: Float? = null, // Overrides KeyboardLayout.defaultKeyHeight for this row
+    val defaultKeyWidth: Float? = null, // Overrides KeyboardLayout.defaultKeyWidth for this row
+    val defaultLogicalKeyGap: Float? = null // Overrides KeyboardLayout.defaultLogicalKeyGap for this row
 )
 
 @Serializable
 data class Key(
     val keyCode: Int? = null,
     val keyCodeLongPress: Int? = null,
+    var label: String? = null,
+    val labelLongPress: String? = null,
+    val icon: String? = null,
+
+    var keyWidth: Float? = null, // Width percentage
+    var keyHeight: Float? = null, // Absolute logical DP
+    var logicalKeyGap: Float? = null, // Gap percentage
+
     val isRepeatable: Boolean? = false,
     val isModifier: Boolean? = false,
+
     val preserveLabelCase: Boolean? = false,
     val preserveSmallLabelCase: Boolean? = false,
-    var label: String? = null,
-    val smallLabel: String? = null,
-    val icon: String? = null,
-    var keyWidth: Float? = null,          // Width percentage, fallback to Row.defaultKeyWidth or Layout.defaultKeyWidth
-    var keyHeight: Float? = null,         // Absolute DP value, fallback to Row.rowHeight or Layout.defaultKeyHeight
-    var keyGap: Float? = null,            // Gap percentage, fallback to Row.defaultKeyGap or Layout.defaultKeyGap
-    var x: Float = 0f,                     // Logical X position (calculated)
-    var y: Float = 0f                      // Logical Y position (calculated)
+
+    var x: Float = 0f, // Logical X
+    var y: Float = 0f  // Logical Y
 )
+
 
 class CustomKeyboard(
     private val context: Context,
     private val layout: KeyboardLayout // Declare as a class property with `val`
 ) {
     val rows: List<Row> = buildRows(layout)
-    val defaultKeyHeight: Float = layout.defaultKeyHeight ?: Constants.DEFAULT_KEY_HEIGHT
 
     // Total logical width of the keyboard
     val totalLogicalWidth: Float
-        get() {
-            // No need to make it variable.
-            return 100.0f
-        }
+        get() = Constants.TOTAL_LOGICAL_WIDTH
 
     // Total logical height of the keyboard
     val totalLogicalHeight: Float
         get() {
             var totalHeight = 0f
             for (row in rows) {
-                val rowHeight = row.rowHeight ?: layout.defaultKeyHeight
-                val rowGap = row.rowGap ?: layout.defaultRowGap
+                val rowHeight = row.defaultKeyHeight ?: layout.defaultKeyHeight
+                val rowGap = row.logicalRowGap ?: layout.defaultLogicalRowGap
                 totalHeight += rowHeight + rowGap
             }
             return totalHeight
         }
 
-
     private fun buildRows(layout: KeyboardLayout): List<Row> {
         var currentY = 0f
 
         return layout.rows.map { row ->
-            val rowHeight = row.rowHeight ?: layout.defaultKeyHeight
-            val rowGap = row.rowGap ?: layout.defaultRowGap
+            val rowHeight = row.defaultKeyHeight ?: layout.defaultKeyHeight
+            val rowGap = row.logicalRowGap ?: layout.defaultLogicalRowGap
             val defaultWidth = row.defaultKeyWidth ?: layout.defaultKeyWidth
-            val defaultGap = row.defaultKeyGap ?: layout.defaultKeyGap
+            val defaultGap = row.defaultLogicalKeyGap ?: layout.defaultLogicalKeyGap
 
             var currentX = 0f
             val keys = row.keys.map { key ->
                 key.apply {
                     keyWidth = keyWidth ?: defaultWidth
                     keyHeight = keyHeight ?: rowHeight
-                    keyGap = keyGap ?: defaultGap
+                    logicalKeyGap = logicalKeyGap ?: defaultGap
 
                     x = currentX
                     y = currentY
                 }
-                currentX += key.keyWidth!! + key.keyGap!!
+                currentX += key.keyWidth!! + key.logicalKeyGap!!
                 key
             }
             currentY += rowHeight + rowGap
-            Row(keys, rowHeight, rowGap, defaultWidth, defaultGap)
+            Row(keys, rowGap, rowHeight, defaultWidth, defaultGap)
         }
     }
-
 
     // Retrieve all keys
     fun getAllKeys(): List<Key> = rows.flatMap { it.keys }
@@ -108,7 +107,6 @@ class CustomKeyboard(
         }
     }
 
-
     // Fetch key by its code
     fun getKeyByCode(code: Int): Key? {
         rows.forEach { row ->
@@ -119,6 +117,7 @@ class CustomKeyboard(
 
     companion object {
         private const val TAG = "CustomKeyboard"
+
         fun fromJson(context: Context, json: String): CustomKeyboard {
             val layout = Json { coerceInputValues = true }.decodeFromString<KeyboardLayout>(json)
             return CustomKeyboard(context, layout)
@@ -139,7 +138,5 @@ class CustomKeyboard(
                 null
             }
         }
-
-
     }
 }

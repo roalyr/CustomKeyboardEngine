@@ -6,6 +6,7 @@ class Constants {
     companion object{
         const val LAYOUT_LANGUAGE_DEFAULT = "keyboard-en-default"
         const val LAYOUT_SERVICE_DEFAULT = "keyboard-service-default"
+        const val LAYOUT_CLIPBOARD_DEFAULT = "keyboard-clipboard-default"
         const val REFERENCE_DEFAULT = "reference.md"
 
 
@@ -30,6 +31,11 @@ class Constants {
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_UP = -19
         const val KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN = -20
         const val KEYCODE_CYCLE_LANGUAGE_LAYOUT = -21
+        const val KEYCODE_CLIPBOARD_ENTRY = -22
+        const val KEYCODE_CLIPBOARD_ERASE = -23
+        const val KEYCODE_OPEN_CLIPBOARD = -24
+
+
         // Default values.
         const val DEFAULT_KEY_HEIGHT = 40f // Logical DP
         const val DEFAULT_KEY_WIDTH = 10f  // Percentage of row width

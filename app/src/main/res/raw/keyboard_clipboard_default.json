@@ -1,0 +1,31 @@
+{
+  "defaultKeyWidth": 20,
+  "defaultKeyHeight": 35,
+  "rows": [
+    {
+      "keys": [
+        {
+          "icon": "@drawable/ic_clipboard",
+          "keyCode": -24,
+          "isModifier": true
+        },
+        {
+          "label": "",
+          "keyCode": -22
+        },
+        {
+          "label": "",
+          "keyCode": -22
+        },
+        {
+          "label": "",
+          "keyCode": -22
+        },
+        {
+          "label": "x",
+          "keyCode": -23
+        }
+      ]
+    }
+  ]
+}

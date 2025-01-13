@@ -43,7 +43,8 @@ data class Key(
     val preserveSmallLabelCase: Boolean? = false,
 
     var x: Float = 0f, // Logical X
-    var y: Float = 0f  // Logical Y
+    var y: Float = 0f,  // Logical Y
+    var id: Int = 0 // Unique ID for each key
 )
 
 
@@ -70,17 +71,20 @@ class CustomKeyboard(
         }
 
     private fun buildRows(layout: KeyboardLayout): List<Row> {
+        val builtRows = mutableListOf<Row>()
         var currentY = 0f
+        var uniqueIdCounter = 0 // Unique ID for all keys
 
-        return layout.rows.map { row ->
+        layout.rows.forEach { row ->
             val rowHeight = row.defaultKeyHeight ?: layout.defaultKeyHeight
             val rowGap = row.logicalRowGap ?: layout.defaultLogicalRowGap
             val defaultWidth = row.defaultKeyWidth ?: layout.defaultKeyWidth
-            val defaultGap = row.defaultLogicalKeyGap ?: layout.defaultLogicalKeyGap
+            val defaultGap = row.defaultLogicalKeyGap ?: layout.defaultLogicalRowGap
 
             var currentX = 0f
             val keys = row.keys.map { key ->
                 key.apply {
+                    id = uniqueIdCounter++ // Assign a unique ID to each key
                     keyWidth = keyWidth ?: defaultWidth
                     keyHeight = keyHeight ?: rowHeight
                     logicalKeyGap = logicalKeyGap ?: defaultGap
@@ -91,13 +95,26 @@ class CustomKeyboard(
                 currentX += key.keyWidth!! + key.logicalKeyGap!!
                 key
             }
+
+            builtRows.add(Row(keys, rowGap, rowHeight, defaultWidth, defaultGap))
             currentY += rowHeight + rowGap
-            Row(keys, rowGap, rowHeight, defaultWidth, defaultGap)
         }
+
+        if (builtRows.isEmpty()) {
+            throw IllegalArgumentException("No rows defined in the keyboard layout")
+        }
+
+        return builtRows
     }
 
+
+
+
     // Retrieve all keys
-    fun getAllKeys(): List<Key> = rows.flatMap { it.keys }
+    fun getAllKeys(): List<Key> {
+        return rows.flatMap { it.keys }
+    }
+
 
     // Retrieve key at logical coordinates
     fun getKeyAt(x: Float, y: Float): Key? {

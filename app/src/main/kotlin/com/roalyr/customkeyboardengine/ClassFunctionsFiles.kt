@@ -49,6 +49,13 @@ class ClassFunctionsFiles {
                     resources
                 ),
                 copyDefaultFileAlways(
+                    "${serviceDir.absolutePath}/${Constants.LAYOUT_CLIPBOARD_DEFAULT}.json",
+                    R.raw.keyboard_clipboard_default,
+                    context,
+                    windowManager,
+                    resources
+                ),
+                copyDefaultFileAlways(
                     "${appDir.absolutePath}/${Constants.REFERENCE_DEFAULT}",
                     R.raw.reference,
                     context,

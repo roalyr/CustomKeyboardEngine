@@ -29,7 +29,7 @@ class CustomKeyboardView @JvmOverloads constructor(
     }
 
     // Keyboard data.
-    private var keyboard: CustomKeyboard? = null
+    var keyboard: CustomKeyboard? = null
     private var keys: List<Key>? = null
 
     // Drawing.
@@ -97,7 +97,7 @@ class CustomKeyboardView @JvmOverloads constructor(
         paint.alpha = 255
     }
 
-    fun setKeyboard(keyboard: CustomKeyboard) {
+    fun updateKeyboard(keyboard: CustomKeyboard) {
         this.keyboard = keyboard
         keys = keyboard.getAllKeys()
         invalidateAllKeys()
@@ -468,13 +468,37 @@ class CustomKeyboardView @JvmOverloads constructor(
                             paint.textAlign = Paint.Align.CENTER
 
                             // Transform the label dynamically based on meta states
-                            val renderedLabel = updateLabelState(key) ?: ""
+                            var renderedLabel = updateLabelState(key) ?: ""
+
+                            var textX = keyBounds.centerX()
+
+                            // Dynamically set label if the key is a clipboard key
+                            if (key.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY) {
+                                paint.textAlign = Paint.Align.LEFT
+                                // Correct the padding issue by adjusting the starting position
+                                textX = keyBounds.left + rectKeyHeight * 0.1f // Minimal padding from the left
+                                key.label = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is committed
+                                renderedLabel = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is rendered
+
+                                // Truncate the label if it exceeds the key width
+                                val ellipsis = "..."
+                                val availableWidth = keyBounds.width() - rectKeyHeight * 0.2f // Leave some padding
+                                renderedLabel = if (paint.measureText(renderedLabel) > availableWidth) {
+                                    var truncatedLabel = renderedLabel
+                                    while (paint.measureText(truncatedLabel + ellipsis) > availableWidth && truncatedLabel.isNotEmpty()) {
+                                        truncatedLabel = truncatedLabel.dropLast(1)
+                                    }
+                                    truncatedLabel + ellipsis
+                                } else {
+                                    renderedLabel
+                                }
+                            }
 
                             // Draw the label if it's not empty
                             if (renderedLabel.isNotEmpty()) {
                                 canvas.drawText(
                                     renderedLabel,
-                                    keyBounds.centerX(),
+                                    textX,
                                     keyBounds.centerY() + rectKeyHeight * 0.3f, // Slightly lower in the middle half
                                     paint
                                 )
@@ -488,13 +512,37 @@ class CustomKeyboardView @JvmOverloads constructor(
                             paint.textAlign = Paint.Align.CENTER
 
                             // Transform the label dynamically based on meta states
-                            val renderedLabel = updateLabelState(key) ?: ""
+                            var renderedLabel = updateLabelState(key) ?: ""
+
+                            var textX = keyBounds.centerX()
+
+                            // Dynamically set label if the key is a clipboard key
+                            if (key.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY) {
+                                paint.textAlign = Paint.Align.LEFT
+                                // Correct the padding issue by adjusting the starting position
+                                textX = keyBounds.left + rectKeyHeight * 0.1f // Minimal padding from the left
+                                key.label = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is committed
+                                renderedLabel = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is rendered
+
+                                // Truncate the label if it exceeds the key width
+                                val ellipsis = "..."
+                                val availableWidth = keyBounds.width() - rectKeyHeight * 0.2f // Leave some padding
+                                renderedLabel = if (paint.measureText(renderedLabel) > availableWidth) {
+                                    var truncatedLabel = renderedLabel
+                                    while (paint.measureText(truncatedLabel + ellipsis) > availableWidth && truncatedLabel.isNotEmpty()) {
+                                        truncatedLabel = truncatedLabel.dropLast(1)
+                                    }
+                                    truncatedLabel + ellipsis
+                                } else {
+                                    renderedLabel
+                                }
+                            }
 
                             // Draw the label if it's not empty
                             if (renderedLabel.isNotEmpty()) {
                                 canvas.drawText(
                                     renderedLabel,
-                                    keyBounds.centerX(),
+                                    textX,
                                     keyBounds.centerY() + (paint.textSize / 3), // Centered vertically
                                     paint
                                 )

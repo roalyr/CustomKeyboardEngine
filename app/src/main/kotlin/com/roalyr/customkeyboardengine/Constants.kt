@@ -18,6 +18,8 @@ class Constants {
         const val KEYBOARD_TRANSLATION_BOTTOM_OFFSET = 40
         const val KEYBOARD_SCALE_INCREMENT = 50
         const val KEYCODE_IGNORE = -1 // If this is assigned - commit label or small label
+        const val CLIPBOARD_MAX_SIZE = 10 // Define maximum clipboard size
+
         // Custom keycodes.
         const val KEYCODE_CLOSE_FLOATING_KEYBOARD = -10
         const val KEYCODE_OPEN_FLOATING_KEYBOARD = -11

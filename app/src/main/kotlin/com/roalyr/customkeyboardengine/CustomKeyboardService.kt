@@ -69,8 +69,7 @@ class CustomKeyboardService : InputMethodService() {
     override fun onCreate() {
         initWindowManager()
         initClipboardManager()
-        // Disabled to be done on demand manually.
-        // ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(windowManager, this, resources)
+        CustomKeyboardClipboard.ensureMapSize(Constants.CLIPBOARD_MAX_SIZE)
         super.onCreate()
     }
 
@@ -224,20 +223,22 @@ class CustomKeyboardService : InputMethodService() {
 
 
     /// NEW LOGIC
-
     private fun createKeyboardLayout(
         rootView: View?,
         keyboardView: CustomKeyboardView?,
         isFloating: Boolean
     ): CustomKeyboardView? {
-        val layout = if (isClipboardOpen) {
-            getClipboardLayout() // Fetch clipboard layout
-        } else {
-            getLanguageLayout() // Fetch language layout
-        }
+        val layout = if (isClipboardOpen) getClipboardLayout() else getLanguageLayout()
 
-        layout?.let { (customKeyboard, isFallback) ->
+        return layout?.let { (customKeyboard, isFallback) ->
             keyboardView?.updateKeyboard(customKeyboard)
+
+            // Initialize and synchronize clipboard keys
+            val clipboardKeys = customKeyboard.getAllKeys().filter { it.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY }
+            CustomKeyboardClipboard.initializeClipboardKeys(clipboardKeys.map { it.id })
+            synchronizeClipboardKeys() // Synchronize right after initializing keys
+
+
             if (keyboardView != null) {
                 setKeyboardActionListener(keyboardView)
             }
@@ -247,13 +248,17 @@ class CustomKeyboardService : InputMethodService() {
                 ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
             }
 
-            return keyboardView
+            keyboardView
         } ?: run {
             val errorMsg = "No valid ${if (isClipboardOpen) "clipboard" else "language"} layout found."
             ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-            return null
+            null
         }
     }
+
+
+
+
 
 
     private fun createFloatingKeyboard() {
@@ -265,8 +270,8 @@ class CustomKeyboardService : InputMethodService() {
 
         floatingKeyboardView = layoutInflater.inflate(R.layout.floating_keyboard_view, null) as? CustomKeyboardView
 
-        val keyboardView = createKeyboardLayout(null, floatingKeyboardView, isFloating = true)
-        if (keyboardView == null) {
+        val keyboard = createKeyboardLayout(null, floatingKeyboardView, isFloating = true)
+        if (keyboard == null) {
             val errorMsg = "Failed to initialize floating keyboard."
             ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
             return
@@ -354,8 +359,7 @@ class CustomKeyboardService : InputMethodService() {
 
     private fun toggleClipboardLayout() {
         isClipboardOpen = !isClipboardOpen // Toggle the current state
-        recreateKeyboards() // Refresh the keyboard to reflect the layout change
-        Log.i(TAG, if (isClipboardOpen) "Switched to clipboard layout." else "Switched to language layout.")
+        recreateKeyboards()
     }
 
 
@@ -683,7 +687,6 @@ class CustomKeyboardService : InputMethodService() {
                     invalidateAllKeysOnAllKeyboards()
                 }
                 Constants.KEYCODE_OPEN_CLIPBOARD -> {
-                    updateClipboardMap()
                     toggleClipboardLayout()
                 }
 
@@ -791,27 +794,35 @@ class CustomKeyboardService : InputMethodService() {
         Log.i(TAG, "System clipboard text: ${systemClipboardText ?: "null"}")
 
         if (systemClipboardText != null && !CustomKeyboardClipboard.containsValue(systemClipboardText)) {
-            val clipboardKeys = keyboardView?.keyboard?.getAllKeys()?.filter { it.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY }
+            CustomKeyboardClipboard.addClipboardEntry(systemClipboardText)
+            Log.i(TAG, "Added new clipboard entry.")
+        }
 
-            if (clipboardKeys.isNullOrEmpty()) {
-                Log.w(TAG, "No clipboard keys found in the layout.")
-                return
-            }
-
-            clipboardKeys.firstOrNull { CustomKeyboardClipboard.getClipboardEntry(it.id) == null }?.let { key ->
-                CustomKeyboardClipboard.addClipboardEntry(key.id, systemClipboardText)
-                Log.i(TAG, "Added clipboard entry to key ID: ${key.id}")
-            } ?: run {
-                Log.i(TAG, "No empty slots. Shifting clipboard entries.")
-                CustomKeyboardClipboard.shiftClipboardEntries(clipboardKeys)
-                val lastKey = clipboardKeys.last()
-                CustomKeyboardClipboard.addClipboardEntry(lastKey.id, systemClipboardText)
-                Log.i(TAG, "Added clipboard entry to last key ID: ${lastKey.id}")
-            }
-
-            invalidateAllKeysOnAllKeyboards()
+        // Invalidate and synchronize clipboard keys if they exist
+        if (keyboardView?.keyboard?.getAllKeys()?.any { it.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY } == true) {
+            synchronizeClipboardKeys()
+        } else {
+            Log.i(TAG, "No clipboard keys found in the current layout.")
         }
     }
+
+
+    private fun synchronizeClipboardKeys() {
+        val allKeys = keyboardView?.keyboard?.getAllKeys() ?: emptyList()
+
+        // Synchronize clipboard keys using the map
+        allKeys.forEach { key ->
+            if (key.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY) {
+                val label = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "Empty"
+                key.label = label
+                Log.i(TAG, "Synchronized clipboard key ID ${key.id} with label: '$label'")
+            }
+        }
+
+        invalidateAllKeysOnAllKeyboards()
+    }
+
+
 
 
 

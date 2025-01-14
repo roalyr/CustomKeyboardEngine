@@ -3,42 +3,75 @@ package com.roalyr.customkeyboardengine
 import android.util.Log
 
 object CustomKeyboardClipboard {
-    val TAG = "CustomKeyboardClipboard"
-    val clipboardMap = mutableMapOf<Int, String?>() // Map of key ID to clipboard content
+    private val TAG = "Clipboard"
+    private val clipboardMap = mutableMapOf<Int, String?>()
 
-    fun addClipboardEntry(keyId: Int, content: String?) {
-        clipboardMap[keyId] = content
+    fun initializeClipboardKeys(keyIds: List<Int>) {
+        if (keyIds.isEmpty()) {
+            Log.i(TAG, "No clipboard keys to initialize.")
+            return
+        }
+
+        // Preserve existing entries for matching keys
+        val currentEntries = clipboardMap.toMap()
+        clipboardMap.clear()
+        keyIds.forEachIndexed { index, keyId ->
+            clipboardMap[keyId] = currentEntries[keyId] ?: currentEntries.values.elementAtOrNull(index) ?: null
+        }
+
+        Log.i(TAG, "Initialized clipboard keys: $keyIds")
+        Log.i(TAG, "Current clipboard map after initialization: $clipboardMap")
     }
+
+
+    fun ensureMapSize(size: Int) {
+        if (clipboardMap.size < size) {
+            val missingKeys = (clipboardMap.size until size).toList()
+            missingKeys.forEach { clipboardMap[it] = null }
+            Log.i(TAG, "Ensured clipboard map size: $size, added keys: $missingKeys")
+        }
+    }
+
+
+    fun containsValue(value: String?): Boolean {
+        return clipboardMap.values.any { it == value }
+    }
+
+
+    fun addClipboardEntry(content: String) {
+        if (clipboardMap.isEmpty()) {
+            Log.w(TAG, "Clipboard map is empty. No keys available to store the entry.")
+            return
+        }
+
+        val keys = clipboardMap.keys.toList()
+        if (containsValue(content)) {
+            Log.i(TAG, "Duplicate entry ignored: $content")
+            return
+        }
+
+        // Shift entries and add the new content to the first key
+        for (i in keys.size - 1 downTo 1) {
+            clipboardMap[keys[i]] = clipboardMap[keys[i - 1]]
+        }
+        clipboardMap[keys.first()] = content
+
+        Log.i(TAG, "Added clipboard entry: $content")
+        Log.i(TAG, "Updated clipboard map: $clipboardMap")
+    }
+
+
 
     fun getClipboardEntry(keyId: Int): String? {
         return clipboardMap[keyId]
     }
 
     fun clearClipboard() {
-        clipboardMap.clear()
+        clipboardMap.keys.forEach { clipboardMap[it] = null }
+        Log.i(TAG, "Cleared all clipboard entries.")
     }
 
-    fun containsValue(value: String): Boolean {
-        return clipboardMap.values.any { it == value }
+    fun getAllEntries(): List<String?> {
+        return clipboardMap.values.toList()
     }
-
-    fun shiftClipboardEntries(clipboardKeys: List<Key>) {
-        for (i in 1 until clipboardKeys.size) {
-            val currentKey = clipboardKeys[i]
-            val previousKey = clipboardKeys[i - 1]
-            val currentContent = getClipboardEntry(currentKey.id)
-
-            if (currentContent != null) {
-                addClipboardEntry(previousKey.id, currentContent)
-                Log.i(TAG, "Shifted content from key ID ${currentKey.id} to ${previousKey.id}")
-            }
-        }
-        // Clear the last key after shifting
-        val lastKey = clipboardKeys.last()
-        addClipboardEntry(lastKey.id, null)
-        Log.i(TAG, "Cleared content from key ID ${lastKey.id}")
-    }
-
-
-
 }

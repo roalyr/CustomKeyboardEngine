@@ -2,9 +2,9 @@ package com.roalyr.customkeyboardengine
 
 import android.content.Context
 import android.content.res.Resources
-import android.util.Log
 import android.view.WindowManager
 import java.io.File
+
 class ClassFunctionsFiles {
     companion object {
         private const val TAG = "ClassFunctionsFiles"
@@ -79,7 +79,7 @@ class ClassFunctionsFiles {
                         inputStream.copyTo(outputStream)
                     }
                 }
-                Log.i(TAG, "Copied (or overwritten) default file to: $targetPath")
+                //Log.i(TAG, "Copied (or overwritten) default file to: $targetPath")
                 true
             } catch (e: Exception) {
                 val errorMsg = "Failed to copy default file to $targetPath. Error: ${e.message}"

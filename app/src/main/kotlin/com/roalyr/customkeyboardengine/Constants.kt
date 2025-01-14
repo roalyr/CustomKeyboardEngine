@@ -9,7 +9,6 @@ class Constants {
         const val LAYOUT_CLIPBOARD_DEFAULT = "keyboard-clipboard-default"
         const val REFERENCE_DEFAULT = "reference.md"
 
-
         // Keyboard internals.
         const val KEYBOARD_MINIMAL_WIDTH = 500
         const val KEYBOARD_MINIMAL_HEIGHT = 500
@@ -37,7 +36,6 @@ class Constants {
         const val KEYCODE_CLIPBOARD_ERASE = -23
         const val KEYCODE_OPEN_CLIPBOARD = -24
 
-
         // Default values.
         const val DEFAULT_KEY_HEIGHT = 40f // Logical DP
         const val DEFAULT_KEY_WIDTH = 10f  // Percentage of row width
@@ -46,7 +44,7 @@ class Constants {
         const val TOTAL_LOGICAL_WIDTH = 100f
 
         // Paths
-        const val APP_MEDIA_NAME = "com.roalyr.customkeyboardengine"
+        private const val APP_MEDIA_NAME = "com.roalyr.customkeyboardengine"
         private const val LAYOUTS_DIRECTORY_NAME = "layouts"
         private const val LAYOUTS_LANGUAGE_NAME = "layouts-language"
         private const val LAYOUTS_SERVICE_NAME = "layouts-service"
@@ -60,11 +58,6 @@ class Constants {
         val MEDIA_LAYOUTS_SERVICE_DIRECTORY: String
             get() = "$MEDIA_APP_DIRECTORY/$LAYOUTS_DIRECTORY_NAME/$LAYOUTS_SERVICE_NAME"
 
-    }
-
-    object Actions {
-        const val CHECK_OVERLAY_PERMISSION = "com.roalyr.customkeyboardengine.CHECK_OVERLAY_PERMISSION"
-        const val CHECK_STORAGE_PERMISSIONS = "com.roalyr.customkeyboardengine.CHECK_STORAGE_PERMISSIONS"
     }
 
     object PermissionTypes {

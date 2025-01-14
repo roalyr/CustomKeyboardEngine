@@ -1,29 +1,128 @@
 {
-  "defaultKeyWidth": 20,
-  "defaultKeyHeight": 35,
+  "defaultKeyWidth": 10,
+  "defaultKeyHeight": 27,
   "rows": [
     {
       "keys": [
+        {
+          "label": "",
+          "keyWidth": 100,
+          "keyCode": -22
+        }
+      ]
+    },
+    {
+      "keys": [
+        {
+          "label": "",
+          "keyWidth": 100,
+          "keyCode": -22
+        }
+      ]
+    },
+    {
+      "keys": [
+        {
+          "label": "",
+          "keyWidth": 100,
+          "keyCode": -22
+        }
+      ]
+    },
+    {
+      "keys": [
+        {
+          "label": "",
+          "keyWidth": 100,
+          "keyCode": -22
+        }
+      ]
+    },
+    {
+      "keys": [
+        {
+          "label": "",
+          "keyWidth": 100,
+          "keyCode": -22
+        }
+      ]
+    },
+    {
+      "keys": [
+        {
+          "label": "",
+          "keyWidth": 100,
+          "keyCode": -22
+        }
+      ]
+    },
+    {
+      "keys": [
+        {
+          "label": "",
+          "keyWidth": 100,
+          "keyCode": -22
+        }
+      ]
+    },
+    {
+      "keys": [
+        {
+          "label": "",
+          "keyWidth": 100,
+          "keyCode": -22
+        }
+      ]
+    },
+    {
+      "keys": [
+        {
+          "label": "",
+          "keyWidth": 100,
+          "keyCode": -22
+        }
+      ]
+    },
+    {
+      "keys": [
+        {
+          "label": "",
+          "keyWidth": 100,
+          "keyCode": -22
+        }
+      ]
+    },
+
+    {
+      "defaultKeyWidth": 10,
+      "defaultKeyHeight": 45,
+      "keys": [
+        {
+          "icon": "@drawable/ic_anchor",
+          "keyCode": -12,
+          "isModifier": true
+        },
         {
           "icon": "@drawable/ic_clipboard",
           "keyCode": -24,
           "isModifier": true
         },
         {
-          "label": "",
-          "keyCode": -22
+          "label": "ctl",
+          "keyCode": 113,
+          "isModifier": true
         },
+        { "label": "c" },
+        { "label": "z" },
+        { "label": "a" },
+        { "label": "x" },
         {
-          "label": "",
-          "keyCode": -22
-        },
-        {
-          "label": "",
-          "keyCode": -22
-        },
-        {
-          "label": "x",
-          "keyCode": -23
+          "labelLongPress": "hold to",
+          "label": "clear",
+          "keyCode": -1,
+          "keyCodeLongPress": -23,
+          "keyWidth": 30,
+          "isModifier": true
         }
       ]
     }

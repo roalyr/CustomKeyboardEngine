@@ -479,19 +479,6 @@ class CustomKeyboardView @JvmOverloads constructor(
                                 textX = keyBounds.left + rectKeyHeight * 0.1f // Minimal padding from the left
                                 key.label = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is committed
                                 renderedLabel = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is rendered
-
-                                // Truncate the label if it exceeds the key width
-                                val ellipsis = "..."
-                                val availableWidth = keyBounds.width() - rectKeyHeight * 0.2f // Leave some padding
-                                renderedLabel = if (paint.measureText(renderedLabel) > availableWidth) {
-                                    var truncatedLabel = renderedLabel
-                                    while (paint.measureText(truncatedLabel + ellipsis) > availableWidth && truncatedLabel.isNotEmpty()) {
-                                        truncatedLabel = truncatedLabel.dropLast(1)
-                                    }
-                                    truncatedLabel + ellipsis
-                                } else {
-                                    renderedLabel
-                                }
                             }
 
                             // Draw the label if it's not empty
@@ -523,19 +510,6 @@ class CustomKeyboardView @JvmOverloads constructor(
                                 textX = keyBounds.left + rectKeyHeight * 0.1f // Minimal padding from the left
                                 key.label = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is committed
                                 renderedLabel = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is rendered
-
-                                // Truncate the label if it exceeds the key width
-                                val ellipsis = "..."
-                                val availableWidth = keyBounds.width() - rectKeyHeight * 0.2f // Leave some padding
-                                renderedLabel = if (paint.measureText(renderedLabel) > availableWidth) {
-                                    var truncatedLabel = renderedLabel
-                                    while (paint.measureText(truncatedLabel + ellipsis) > availableWidth && truncatedLabel.isNotEmpty()) {
-                                        truncatedLabel = truncatedLabel.dropLast(1)
-                                    }
-                                    truncatedLabel + ellipsis
-                                } else {
-                                    renderedLabel
-                                }
                             }
 
                             // Draw the label if it's not empty

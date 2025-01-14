@@ -46,11 +46,10 @@ class CustomKeyboardService : InputMethodService() {
 
     private lateinit var clipboardManager: ClipboardManager
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
-        Log.i(TAG, "System clipboard updated.")
+        //Log.i(TAG, "System clipboard updated.")
         updateClipboardMap() // Reflect updates in your clipboard keys
     }
     private var isClipboardOpen = false
-
 
 
     companion object {
@@ -100,7 +99,7 @@ class CustomKeyboardService : InputMethodService() {
     private fun initClipboardManager() {
         clipboardManager = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         clipboardManager.addPrimaryClipChangedListener(clipboardListener)
-        Log.i(TAG, "Clipboard listener registered.")
+        //Log.i(TAG, "Clipboard listener registered.")
     }
 
     ////////////////////////////////////////////
@@ -115,114 +114,7 @@ class CustomKeyboardService : InputMethodService() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
     }
 
-//    private fun createFloatingKeyboard() {
-//        if (!Settings.canDrawOverlays(this)) {
-//            val errorMsg = "Overlay permission denied"
-//            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-//            return
-//        }
-//
-//        floatingKeyboardView = layoutInflater.inflate(R.layout.floating_keyboard_view, null) as? CustomKeyboardView
-//
-//        floatingKeyboardView?.let { view ->
-//            val (customKeyboard, isFallback) = languageLayouts.getOrNull(currentLanguageLayoutIndex)
-//                ?: run {
-//                    val errorMsg = "No valid language layout found at index: $currentLanguageLayoutIndex"
-//                    ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-//                    return
-//                }
-//
-//            view.updateKeyboard(customKeyboard)
-//            setKeyboardActionListener(view)
-//
-//            if (isFallback) {
-//                val errorMsg = "Using fallback language layout at index: $currentLanguageLayoutIndex"
-//                ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-//            }
-//
-//            val params = WindowManager.LayoutParams(
-//                floatingKeyboardWidth,
-//                WindowManager.LayoutParams.WRAP_CONTENT,
-//                floatingKeyboardPosX,
-//                floatingKeyboardPosY,
-//                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-//                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-//                PixelFormat.TRANSLUCENT
-//            )
-//
-//            try {
-//                windowManager.addView(view, params)
-//                isFloatingKeyboardOpen = true
-//                view.post { floatingKeyboardHeight = view.measuredHeight }
-//            } catch (e: Exception) {
-//                val errorMsg = "Failed to add floating keyboard view: ${e.message}"
-//                ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-//            }
-//        } ?: run {
-//            val errorMsg = "Failed to inflate floating keyboard view"
-//            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-//        }
-//    }
-//
-//    private fun createServiceKeyboard(): View? {
-//        val rootView = inputView ?: run {
-//            val errorMsg = "Input view is null"
-//            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-//            return null
-//        }
-//        serviceKeyboardView = rootView.findViewById(R.id.service_keyboard_view) as? CustomKeyboardView
-//        serviceKeyboardView?.let { view ->
-//            // TODO: Load a service keyboard according to settings, For now - only the one with default name.
-//            val customKeyboardPair = serviceLayouts[Constants.LAYOUT_SERVICE_DEFAULT]
-//            if (customKeyboardPair != null) {
-//                val (customKeyboard, isFallback) = customKeyboardPair
-//                view.updateKeyboard(customKeyboard)
-//                setKeyboardActionListener(view)
-//                if (isFallback) {
-//                    val errorMsg = "Using fallback service layout $Constants.LAYOUT_SERVICE_DEFAULT."
-//                    ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-//                }
-//            } else {
-//                val errorMsg = "Service keyboard layout not found."
-//                ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-//            }
-//        } ?: run {
-//            val errorMsg = "Service keyboard view not found."
-//            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-//        }
-//        return rootView
-//    }
-//
-//    private fun createStandardKeyboard(): View? {
-//        val rootView = inputView ?: run {
-//            val errorMsg = "Input view is null."
-//            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-//            return null
-//        }
-//        keyboardView = rootView.findViewById(R.id.keyboard_view) as? CustomKeyboardView
-//        keyboardView?.let { view ->
-//            val (customKeyboard, isFallback) = languageLayouts.getOrNull(currentLanguageLayoutIndex)
-//                ?: run {
-//                    val errorMsg = "No valid language layout found at index: $currentLanguageLayoutIndex"
-//                    ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-//                    return rootView
-//                }
-//            view.updateKeyboard(customKeyboard)
-//            setKeyboardActionListener(view)
-//            if (isFallback) {
-//                val errorMsg = "Using fallback language layout at index: $currentLanguageLayoutIndex"
-//                ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-//            }
-//            return rootView
-//        } ?: run {
-//            val errorMsg = "Keyboard view is null."
-//            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-//        }
-//        return null
-//    }
 
-
-    /// NEW LOGIC
     private fun createKeyboardLayout(
         rootView: View?,
         keyboardView: CustomKeyboardView?,
@@ -359,6 +251,7 @@ class CustomKeyboardService : InputMethodService() {
 
     private fun toggleClipboardLayout() {
         isClipboardOpen = !isClipboardOpen // Toggle the current state
+        reloadKeyboardLayouts()
         recreateKeyboards()
     }
 
@@ -791,18 +684,18 @@ class CustomKeyboardService : InputMethodService() {
     // Clipboard management
     private fun updateClipboardMap() {
         val systemClipboardText = getClipboardText()
-        Log.i(TAG, "System clipboard text: ${systemClipboardText ?: "null"}")
+        //Log.i(TAG, "System clipboard text: ${systemClipboardText ?: "null"}")
 
         if (systemClipboardText != null && !CustomKeyboardClipboard.containsValue(systemClipboardText)) {
             CustomKeyboardClipboard.addClipboardEntry(systemClipboardText)
-            Log.i(TAG, "Added new clipboard entry.")
+            //Log.i(TAG, "Added new clipboard entry.")
         }
 
         // Invalidate and synchronize clipboard keys if they exist
         if (keyboardView?.keyboard?.getAllKeys()?.any { it.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY } == true) {
             synchronizeClipboardKeys()
         } else {
-            Log.i(TAG, "No clipboard keys found in the current layout.")
+            //Log.i(TAG, "No clipboard keys found in the current layout.")
         }
     }
 
@@ -813,17 +706,13 @@ class CustomKeyboardService : InputMethodService() {
         // Synchronize clipboard keys using the map
         allKeys.forEach { key ->
             if (key.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY) {
-                val label = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "Empty"
+                val label = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: ""
                 key.label = label
-                Log.i(TAG, "Synchronized clipboard key ID ${key.id} with label: '$label'")
+                //Log.i(TAG, "Synchronized clipboard key ID ${key.id} with label: '$label'")
             }
         }
-
         invalidateAllKeysOnAllKeyboards()
     }
-
-
-
 
 
     private fun getClipboardText(): String? {
@@ -832,11 +721,10 @@ class CustomKeyboardService : InputMethodService() {
     }
 
 
-
     ////////////////////////////////////////////
     // Keyboard reloading
     private fun reloadKeyboardLayouts() {
-        Log.i(TAG, "Reloading all keyboard layouts.")
+        //Log.i(TAG, "Reloading all keyboard layouts.")
 
         // Disabled to be called on demand manually.
         // ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(windowManager, this, resources)
@@ -881,10 +769,10 @@ class CustomKeyboardService : InputMethodService() {
         // Reset to a valid index
         if (currentLanguageLayoutIndex >= languageLayouts.size || currentLanguageLayoutIndex < 0) {
             currentLanguageLayoutIndex = 0
-            Log.i(TAG, "Resetting currentLanguageLayoutIndex to 0")
+            //Log.i(TAG, "Resetting currentLanguageLayoutIndex to 0")
         }
 
-        Log.i(TAG, "Loaded ${languageLayouts.size} language layouts and ${serviceLayouts.size} service layouts.")
+        //Log.i(TAG, "Loaded ${languageLayouts.size} language layouts and ${serviceLayouts.size} service layouts.")
     }
 
     private fun reloadLayouts(

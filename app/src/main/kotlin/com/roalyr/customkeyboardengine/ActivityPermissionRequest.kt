@@ -1,10 +1,8 @@
 package com.roalyr.customkeyboardengine
 
 import android.Manifest
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -13,7 +11,6 @@ import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 
 class ActivityPermissionRequest : AppCompatActivity() {
 
@@ -26,39 +23,6 @@ class ActivityPermissionRequest : AppCompatActivity() {
                 putExtra(Constants.PermissionTypes.EXTRA_TYPE, permissionType)
             }
             context.startActivity(intent)
-        }
-
-        fun checkAndRequestOverlayPermission(context: Context): Boolean {
-            return if (!Settings.canDrawOverlays(context)) {
-                val intent = Intent(context, ActivityPermissionRequest::class.java).apply {
-                    putExtra(Constants.PermissionTypes.EXTRA_TYPE, Constants.PermissionTypes.OVERLAY)
-                }
-                context.startActivity(intent)
-                false
-            } else {
-                true
-            }
-        }
-
-        fun checkAndRequestStoragePermissions(context: Context): Boolean {
-            return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                if (ContextCompat.checkSelfPermission(
-                        context, Manifest.permission.WRITE_EXTERNAL_STORAGE
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    ActivityCompat.requestPermissions(
-                        context as Activity,
-                        arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                        Constants.RequestCodes.STORAGE_PERMISSIONS
-                    )
-                    false
-                } else {
-                    true
-                }
-            } else {
-                Log.i(TAG, "No explicit storage permissions required for Android 10+")
-                true
-            }
         }
     }
 
@@ -92,7 +56,7 @@ class ActivityPermissionRequest : AppCompatActivity() {
                 Constants.RequestCodes.STORAGE_PERMISSIONS
             )
         } else {
-            Log.i(TAG, "Storage permission not required for Android 10+")
+            //Log.i(TAG, "Storage permission not required for Android 10+")
             Toast.makeText(this, "Storage permission not required for Android 10+.", Toast.LENGTH_SHORT).show()
             finish()
         }

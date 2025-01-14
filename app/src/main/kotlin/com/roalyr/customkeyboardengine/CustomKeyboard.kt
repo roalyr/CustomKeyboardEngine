@@ -1,7 +1,6 @@
 package com.roalyr.customkeyboardengine
 
 import android.content.Context
-import android.util.Log
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -99,15 +98,11 @@ class CustomKeyboard(
             builtRows.add(Row(keys, rowGap, rowHeight, defaultWidth, defaultGap))
             currentY += rowHeight + rowGap
         }
-
         if (builtRows.isEmpty()) {
             throw IllegalArgumentException("No rows defined in the keyboard layout")
         }
-
         return builtRows
     }
-
-
 
 
     // Retrieve all keys
@@ -147,7 +142,7 @@ class CustomKeyboard(
         ): CustomKeyboard? {
             return try {
                 val content = file.readText()
-                Log.i(TAG, "Attempting to parse file: ${file.name}")
+                //Log.i(TAG, "Attempting to parse file: ${file.name}")
                 fromJson(context, content)
             } catch (e: Exception) {
                 val errorMessage = "$TAG: Error parsing file ${file.name}: ${e.message}"

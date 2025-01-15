@@ -16,6 +16,7 @@
 
 # [REFERENCE MANUAL](./app/src/main/res/raw/reference.md)
 ### [Hint: Use Markor text editor to view the document in a more convenient way](https://github.com/gsantner/markor)
+### [Download layout .json files here](https://github.com/roalyr/CustomKeyboardEngine-layouts-language)
 
 ---
 

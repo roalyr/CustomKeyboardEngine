@@ -4,9 +4,9 @@ import android.os.Environment
 
 class Constants {
     companion object{
-        const val LAYOUT_LANGUAGE_DEFAULT = "keyboard-en-default"
-        const val LAYOUT_SERVICE_DEFAULT = "keyboard-service-default"
-        const val LAYOUT_CLIPBOARD_DEFAULT = "keyboard-clipboard-default"
+        const val LAYOUT_LANGUAGE_DEFAULT = "keyboard_en_default"
+        const val LAYOUT_SERVICE_DEFAULT = "keyboard_service_default"
+        const val LAYOUT_CLIPBOARD_DEFAULT = "keyboard_clipboard_default"
         const val REFERENCE_DEFAULT = "reference.md"
 
         // Keyboard internals.

@@ -122,7 +122,7 @@ class CustomKeyboardService : InputMethodService() {
     ): CustomKeyboardView? {
         val layout = if (isClipboardOpen) getClipboardLayout() else getLanguageLayout()
 
-        return layout?.let { (customKeyboard, isFallback) ->
+        return layout?.let { (customKeyboard) ->
             keyboardView?.updateKeyboard(customKeyboard)
 
             // Initialize and synchronize clipboard keys
@@ -133,11 +133,6 @@ class CustomKeyboardService : InputMethodService() {
 
             if (keyboardView != null) {
                 setKeyboardActionListener(keyboardView)
-            }
-
-            if (isFallback) {
-                val errorMsg = "Using fallback layout for ${if (isClipboardOpen) "clipboard" else "language"}."
-                ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
             }
 
             keyboardView
@@ -218,14 +213,10 @@ class CustomKeyboardService : InputMethodService() {
         serviceKeyboardView?.let { view ->
             val customKeyboardPair = serviceLayouts[Constants.LAYOUT_SERVICE_DEFAULT]
             if (customKeyboardPair != null) {
-                val (customKeyboard, isFallback) = customKeyboardPair
+                val (customKeyboard) = customKeyboardPair
                 view.updateKeyboard(customKeyboard)
                 setKeyboardActionListener(view)
 
-                if (isFallback) {
-                    val errorMsg = "Using fallback service layout $Constants.LAYOUT_SERVICE_DEFAULT."
-                    ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-                }
             } else {
                 val errorMsg = "Service keyboard layout not found."
                 ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
@@ -724,11 +715,6 @@ class CustomKeyboardService : InputMethodService() {
     ////////////////////////////////////////////
     // Keyboard reloading
     private fun reloadKeyboardLayouts() {
-        //Log.i(TAG, "Reloading all keyboard layouts.")
-
-        // Disabled to be called on demand manually.
-        // ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(windowManager, this, resources)
-
         // Clear existing layouts
         languageLayouts.clear()
         serviceLayouts.clear()
@@ -742,12 +728,10 @@ class CustomKeyboardService : InputMethodService() {
             layoutType = "Language",
             onFileParsed = { keyboard, fileName, isFallback ->
                 languageLayouts.add(Pair(keyboard, isFallback))
-                //Log.i(TAG, "Loaded language layout: $fileName (Fallback: $isFallback)")
             },
-            onFallback = { fileName ->
-                val fallbackLayout = loadFallbackLanguageLayout()
+            onFallback = { fallbackLayout ->
                 languageLayouts.add(Pair(fallbackLayout, true))
-                Log.w(TAG, "Using fallback language layout for: $fileName")
+                Log.w(TAG, "Using fallback language layout.")
             }
         )
 
@@ -757,72 +741,87 @@ class CustomKeyboardService : InputMethodService() {
             layoutType = "Service",
             onFileParsed = { keyboard, fileName, isFallback ->
                 serviceLayouts[fileName] = Pair(keyboard, isFallback)
-                //Log.i(TAG, "Loaded service layout: $fileName (Fallback: $isFallback)")
             },
-            onFallback = { fileName ->
-                val fallbackLayout = loadFallbackServiceLayout()
-                serviceLayouts[fileName] = Pair(fallbackLayout, true)
-                Log.w(TAG, "Using fallback service layout for: $fileName")
+            onFallback = { fallbackLayout ->
+                serviceLayouts[Constants.LAYOUT_SERVICE_DEFAULT] = Pair(fallbackLayout, true)
+                Log.w(TAG, "Using fallback service layout.")
             }
         )
 
-        // Reset to a valid index
+        // Reload clipboard layouts (stored in the same directory as service layouts)
+        reloadLayouts(
+            directory = serviceDirectory,
+            layoutType = "Clipboard",
+            onFileParsed = { keyboard, fileName, isFallback ->
+                serviceLayouts[fileName] = Pair(keyboard, isFallback)
+            },
+            onFallback = { fallbackLayout ->
+                serviceLayouts[Constants.LAYOUT_CLIPBOARD_DEFAULT] = Pair(fallbackLayout, true)
+                Log.w(TAG, "Using fallback clipboard layout.")
+            }
+        )
+
+        // Reset to a valid language layout index
         if (currentLanguageLayoutIndex >= languageLayouts.size || currentLanguageLayoutIndex < 0) {
             currentLanguageLayoutIndex = 0
-            //Log.i(TAG, "Resetting currentLanguageLayoutIndex to 0")
         }
-
-        //Log.i(TAG, "Loaded ${languageLayouts.size} language layouts and ${serviceLayouts.size} service layouts.")
     }
 
     private fun reloadLayouts(
         directory: File,
         layoutType: String,
         onFileParsed: (CustomKeyboard, String, Boolean) -> Unit,
-        onFallback: (String) -> Unit
+        onFallback: (CustomKeyboard) -> Unit
     ) {
-        //Log.i(TAG, "Checking $layoutType layouts directory: ${directory.absolutePath}")
-
         if (!directory.exists() || !directory.isDirectory) {
             val errorMsg = "$layoutType layouts directory does not exist or is not a directory: ${directory.absolutePath}"
             ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-            onFallback(Constants.LAYOUT_LANGUAGE_DEFAULT.takeIf { layoutType == "Language" }
-                ?: Constants.LAYOUT_SERVICE_DEFAULT)
+            handleFallback(layoutType, onFallback)
             return
         }
 
         val files = directory.listFiles()
             ?.filter { it.isFile && it.canRead() && it.name.endsWith(".json") }
-            ?.sortedBy { it.name.lowercase() } // Sort files alphabetically, case-insensitive
+            ?.sortedBy { it.name.lowercase() }
             ?: emptyList()
 
-        //Log.i(TAG, "Found ${files.size} valid $layoutType layout files in directory.")
-
         if (files.isEmpty()) {
-            //Log.w(TAG, "No valid $layoutType layouts found. Loading default fallback layout.")
-            onFallback(Constants.LAYOUT_LANGUAGE_DEFAULT.takeIf { layoutType == "Language" }
-                ?: Constants.LAYOUT_SERVICE_DEFAULT)
+            handleFallback(layoutType, onFallback)
             return
         }
 
         files.forEach { file ->
             try {
-                //Log.i(TAG, "Attempting to load $layoutType layout: ${file.name}")
                 CustomKeyboard.fromJsonFile(this, file) { error ->
-                    val errorMsg = "Error loading $layoutType layout from file: ${file.name}. Error: $error"
-                    ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-                    onFallback(file.name)
+                    ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, error)
+                    handleFallback(layoutType, onFallback)
                 }?.let { keyboard ->
                     onFileParsed(keyboard, file.nameWithoutExtension, false)
-                    //Log.i(TAG, "Successfully loaded $layoutType layout: ${file.name}")
                 }
             } catch (e: Exception) {
-                val parseError = "Failed to parse $layoutType layout: ${file.name}. Error: ${e.message}"
+                val parseError = "Failed to parse. ${e.message}"
                 ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, parseError)
-                onFallback(file.name)
+                handleFallback(layoutType, onFallback)
             }
         }
     }
+
+
+    private fun handleFallback(layoutType: String, onFallback: (CustomKeyboard) -> Unit) {
+        try {
+            val fallbackLayout = when (layoutType) {
+                "Language" -> loadFallbackLanguageLayout()
+                "Service" -> loadFallbackServiceLayout()
+                "Clipboard" -> loadFallbackClipboardLayout()
+                else -> throw IllegalArgumentException("Unknown layout type: $layoutType")
+            }
+            onFallback(fallbackLayout)
+        } catch (e: Exception) {
+            val errorMsg = "Failed to load fallback layout: ${e.message}"
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+        }
+    }
+
 
     private fun loadFallbackLanguageLayout(): CustomKeyboard {
         return try {
@@ -831,7 +830,7 @@ class CustomKeyboardService : InputMethodService() {
                 //Log.i(TAG, "Fallback language layout loaded successfully.")
             } ?: throw Exception("Parsed fallback language layout is null")
         } catch (e: Exception) {
-            val errorMsg = "Error loading fallback language layout: ${e.message}"
+            val errorMsg = "Error loading fallback layout: ${e.message}"
             ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
             throw e
         }
@@ -844,7 +843,20 @@ class CustomKeyboardService : InputMethodService() {
                 //Log.i(TAG, "Fallback service layout loaded successfully.")
             } ?: throw Exception("Parsed fallback service layout is null")
         } catch (e: Exception) {
-            val errorMsg = "Error loading fallback service layout: ${e.message}"
+            val errorMsg = "Error loading fallback layout: ${e.message}"
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+            throw e
+        }
+    }
+
+    private fun loadFallbackClipboardLayout(): CustomKeyboard {
+        return try {
+            val json = resources.openRawResource(R.raw.keyboard_clipboard_default).bufferedReader().use { it.readText() }
+            CustomKeyboard.fromJson(this, json).also {
+                //Log.i(TAG, "Fallback service layout loaded successfully.")
+            } ?: throw Exception("Parsed fallback clipboard layout is null")
+        } catch (e: Exception) {
+            val errorMsg = "Error loading fallback layout: ${e.message}"
             ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
             throw e
         }

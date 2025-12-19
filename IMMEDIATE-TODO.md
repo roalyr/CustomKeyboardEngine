@@ -1,17 +1,18 @@
 # IMMEDIATE-TODO.md
-**Sprint:** Priority 1 - Critical Core Functionality
+**Sprint:** Architecture Cleanup (from MAINTENANCE-PLAN.md)
 **Date:** 2025-12-19
 
 ---
 
 ## 1. CONTEXT
 
-Implement the first three Priority 1 items from TODO.md to establish a robust foundation:
-1. **Defensive null handling** for keys without code/label/icon
-2. **JSON settings file** (`settings.json`) for user-overridable constants
-3. **Touch correction offsets** as part of the settings system
+Execute high and medium priority cleanup tasks from MAINTENANCE-PLAN.md to reduce technical debt:
+1. **Extract UI strings to resources** - Improve localization readiness
+2. **Extract color constants** - Eliminate magic numbers for theme colors
+3. **Remove dead code** - Unused color fields in CustomKeyboardView.kt
+4. **Consolidate duplicated methods** - Reduce maintenance burden
 
-These are foundational improvements that affect reliability and user customization.
+This sprint focuses on code quality without changing functionality.
 
 ---
 
@@ -19,239 +20,208 @@ These are foundational improvements that affect reliability and user customizati
 
 | Component | Location |
 |-----------|----------|
-| Settings data class | `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboard.kt` |
-| Settings loading logic | `app/src/main/kotlin/com/roalyr/customkeyboardengine/ClassFunctionsFiles.kt` |
-| Constants integration | `app/src/main/kotlin/com/roalyr/customkeyboardengine/Constants.kt` |
-| View touch handling | `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardView.kt` |
-| Service integration | `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardService.kt` |
-| Default settings file | `app/src/main/res/raw/settings_default.json` |
-| Documentation | `app/src/main/res/raw/reference.md` |
+| String resources | `app/src/main/res/values/strings.xml` |
+| Constants | `app/src/main/kotlin/com/roalyr/customkeyboardengine/Constants.kt` |
+| Main Activity | `app/src/main/kotlin/com/roalyr/customkeyboardengine/ActivityMain.kt` |
+| Permission Activity | `app/src/main/kotlin/com/roalyr/customkeyboardengine/ActivityPermissionRequest.kt` |
+| Keyboard View | `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardView.kt` |
+| Keyboard Service | `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardService.kt` |
+| Popups | `app/src/main/kotlin/com/roalyr/customkeyboardengine/ClassFunctionsPopups.kt` |
 
 ---
 
 ## 3. ATOMIC TASKS
 
-### Task 1: Defensive Null Handling for Keys
-- [x] **1.1 Add safe key rendering in CustomKeyboardView.kt**
-  - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardView.kt`
+### Task 1: Extract UI Strings to Resources (HIGH PRIORITY)
+- [ ] **1.1 Add string resources to strings.xml**
+  - **TARGET FILE:** `app/src/main/res/values/strings.xml`
   - **DEPENDENCIES:** None
-  - **PSEUDO-CODE:**
-    ```kotlin
-    // In onDraw(), wrap key rendering in null-safe checks:
-    private fun shouldRenderKey(key: Key): Boolean {
-        return key.keyCode != null || !key.label.isNullOrEmpty() || !key.icon.isNullOrEmpty()
-    }
+  - **CONTENT TO ADD:**
+    ```xml
+    <!-- Buttons -->
+    <string name="btn_grant_storage">1. Grant Storage Permission</string>
+    <string name="btn_grant_overlay">2. Grant Overlay Permission</string>
+    <string name="btn_change_input">3. Change Input Method</string>
+    <string name="btn_copy_defaults">4. Copy (rewrite) default layouts and reference manual to working folder</string>
+    <string name="btn_copy_settings">5. Copy (rewrite) default settings.json to working folder</string>
+    <string name="btn_github">Visit GitHub Page</string>
     
-    // Skip drawing label/icon if both are null/empty
-    // Ensure keyCode fallback doesn't crash if all are null
+    <!-- Labels -->
+    <string name="label_working_dir">📂 Working Directory Path:</string>
+    <string name="working_dir_path">/storage/emulated/0/Android/media/com.roalyr.customkeyboardengine/</string>
+    
+    <!-- Hints -->
+    <string name="hint_json_files">ℹ️ HINT: Look for .json files in the directory above. You can edit them using any external text editor. Refer to reference.md in the folder for more information.</string>
+    <string name="hint_directory">ℹ️ HINT: If the directory is not created automatically, create it manually and restart the app.</string>
+    <string name="hint_test_input">Type here to test keyboard…</string>
+    
+    <!-- Warnings -->
+    <string name="warning_backup">⚠️ IMPORTANT: Backup files in the directory above to prevent data loss before uninstalling the app.</string>
+    
+    <!-- Toasts -->
+    <string name="toast_defaults_copied">Default layouts and reference copied</string>
+    <string name="toast_settings_copied">Default settings.json copied</string>
+    <string name="toast_settings_failed">Failed to copy settings.json: %1$s</string>
+    <string name="toast_folder_failed">Failed to create working folder</string>
+    <string name="error_unknown_permission">Unknown permission type.</string>
+    <string name="info_storage_not_required">Storage permission not required for Android 10+.</string>
     ```
-  - **SUCCESS CRITERIA:** 
-    - App does not crash when a key has no keyCode, label, or icon
-    - Empty keys render as blank rectangles (background only)
+  - **SUCCESS CRITERIA:** All strings compile without errors
 
-- [x] **1.2 Add safe key action handling in CustomKeyboardService.kt**
-  - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardService.kt`
+- [ ] **1.2 Update ActivityMain.kt to use string resources**
+  - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/ActivityMain.kt`
   - **DEPENDENCIES:** Task 1.1
-  - **PSEUDO-CODE:**
-    ```kotlin
-    // In handleKey() and handleCustomKey():
-    // Early return if code is null AND label is null/empty
-    private fun handleKey(code: Int?, label: CharSequence?) {
-        if (code == null && label.isNullOrEmpty()) return
-        // ... existing logic
-    }
-    ```
-  - **SUCCESS CRITERIA:**
-    - Pressing a key with no code/label does nothing (no crash, no output)
+  - **CHANGES:**
+    - Import `androidx.compose.ui.res.stringResource`
+    - Replace all hardcoded strings with `stringResource(R.string.xxx)`
+    - For Toast messages, use `getString(R.string.xxx)` or format with `getString(R.string.xxx, arg)`
+  - **SUCCESS CRITERIA:** No hardcoded UI strings remain in ActivityMain.kt
+
+- [ ] **1.3 Update ActivityPermissionRequest.kt to use string resources**
+  - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/ActivityPermissionRequest.kt`
+  - **DEPENDENCIES:** Task 1.1
+  - **CHANGES:**
+    - Replace `"Unknown permission type."` with `getString(R.string.error_unknown_permission)`
+    - Replace `"Storage permission not required..."` with `getString(R.string.info_storage_not_required)`
+  - **SUCCESS CRITERIA:** No hardcoded Toast strings remain
 
 ---
 
-### Task 2: JSON Settings File Infrastructure
-- [x] **2.1 Create Settings data class**
-  - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboard.kt`
-  - **DEPENDENCIES:** None
-  - **PSEUDO-CODE:**
-    ```kotlin
-    @Serializable
-    data class KeyboardSettings(
-        // Keyboard dimensions
-        val keyboardMinimalWidth: Int = Constants.KEYBOARD_MINIMAL_WIDTH,
-        val keyboardMinimalHeight: Int = Constants.KEYBOARD_MINIMAL_HEIGHT,
-        
-        // Translation/Scale
-        val keyboardTranslationIncrement: Int = Constants.KEYBOARD_TRANSLATION_INCREMENT,
-        val keyboardScaleIncrement: Int = Constants.KEYBOARD_SCALE_INCREMENT,
-        
-        // Touch correction
-        val touchCorrectionX: Float = 0f,
-        val touchCorrectionY: Float = 0f,
-        
-        // Key defaults
-        val defaultKeyHeight: Float = Constants.DEFAULT_KEY_HEIGHT,
-        val defaultKeyWidth: Float = Constants.DEFAULT_KEY_WIDTH,
-        val defaultLogicalRowGap: Float = Constants.DEFAULT_LOGICAL_ROW_GAP,
-        val defaultLogicalKeyGap: Float = Constants.DEFAULT_LOGICAL_KEY_GAP,
-        
-        // Rendering
-        val renderedKeyGap: Float = 5f,
-        val renderedRowGap: Float = 5f,
-        val keyCornerRadiusFactor: Float = 0.1f
-    )
-    ```
-  - **SUCCESS CRITERIA:** Data class compiles with kotlinx.serialization
-
-- [x] **2.2 Create default settings.json resource**
-  - **TARGET FILE:** `app/src/main/res/raw/settings_default.json`
-  - **DEPENDENCIES:** Task 2.1
-  - **PSEUDO-CODE:**
-    ```json
-    {
-      "keyboardMinimalWidth": 500,
-      "keyboardMinimalHeight": 500,
-      "keyboardTranslationIncrement": 50,
-      "keyboardScaleIncrement": 50,
-      "touchCorrectionX": 0.0,
-      "touchCorrectionY": 0.0,
-      "defaultKeyHeight": 40.0,
-      "defaultKeyWidth": 10.0,
-      "defaultLogicalRowGap": 0.0,
-      "defaultLogicalKeyGap": 0.0,
-      "renderedKeyGap": 5.0,
-      "renderedRowGap": 5.0,
-      "keyCornerRadiusFactor": 0.1
-    }
-    ```
-  - **SUCCESS CRITERIA:** Valid JSON that can be parsed into KeyboardSettings
-
-- [x] **2.3 Add settings file path to Constants.kt**
+### Task 2: Extract Color Constants (HIGH PRIORITY)
+- [ ] **2.1 Add color constants to Constants.kt**
   - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/Constants.kt`
   - **DEPENDENCIES:** None
-  - **PSEUDO-CODE:**
+  - **CONTENT TO ADD (inside companion object):**
     ```kotlin
-    const val SETTINGS_FILENAME = "settings.json"
-    const val SETTINGS_DEFAULT = "settings_default"
+    // Theme color fallbacks
+    const val DEFAULT_ACCENT_COLOR = 0xFF6A5ACD.toInt() // Soft purple fallback
+    const val TEXT_COLOR_DARK_THEME = 0xFFCCCCCC.toInt()
+    const val TEXT_COLOR_LIGHT_THEME = 0xFF333333.toInt()
     
-    val MEDIA_SETTINGS_FILE: String
-        get() = "$MEDIA_APP_DIRECTORY/$SETTINGS_FILENAME"
+    // Popup positioning
+    const val ERROR_POPUP_MARGIN_TOP = 50
     ```
-  - **SUCCESS CRITERIA:** Path constants are accessible
+  - **SUCCESS CRITERIA:** Constants compile successfully
 
-- [x] **2.4 Implement settings loading in ClassFunctionsFiles.kt**
-  - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/ClassFunctionsFiles.kt`
-  - **DEPENDENCIES:** Tasks 2.1, 2.2, 2.3
-  - **PSEUDO-CODE:**
-    ```kotlin
-    object SettingsManager {
-        private var cachedSettings: KeyboardSettings? = null
-        
-        fun loadSettings(context: Context, onError: (String) -> Unit): KeyboardSettings {
-            cachedSettings?.let { return it }
-            
-            val file = File(Constants.MEDIA_SETTINGS_FILE)
-            return if (file.exists()) {
-                try {
-                    Json.decodeFromString<KeyboardSettings>(file.readText())
-                } catch (e: Exception) {
-                    onError("Failed to parse settings: ${e.message}")
-                    loadDefaultSettings(context)
-                }
-            } else {
-                loadDefaultSettings(context)
-            }.also { cachedSettings = it }
-        }
-        
-        private fun loadDefaultSettings(context: Context): KeyboardSettings {
-            val inputStream = context.resources.openRawResource(R.raw.settings_default)
-            return Json.decodeFromString(inputStream.bufferedReader().readText())
-        }
-        
-        fun reloadSettings() { cachedSettings = null }
-    }
-    ```
-  - **SUCCESS CRITERIA:** Settings load from user file or fallback to defaults
-
-- [x] **2.5 Copy default settings file functionality in ActivityMain.kt**
-  - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/ActivityMain.kt`
-  - **DEPENDENCIES:** Tasks 2.2, 2.3
-  - **PSEUDO-CODE:**
-    ```kotlin
-    // Add button/function to copy default settings.json to media directory
-    // Similar to existing layout copying functionality
-    ```
-  - **SUCCESS CRITERIA:** User can copy default settings.json to external storage
-
----
-
-### Task 3: Integrate Touch Correction
-- [ ] **3.1 Apply touch correction in CustomKeyboardView.kt**
+- [ ] **2.2 Update CustomKeyboardView.kt to use color constants**
   - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardView.kt`
-  - **DEPENDENCIES:** Tasks 2.1, 2.4
-  - **PSEUDO-CODE:**
-    ```kotlin
-    // Add settings reference
-    private var settings: KeyboardSettings? = null
-    
-    fun updateSettings(settings: KeyboardSettings) {
-        this.settings = settings
-    }
-    
-    // In handleTouchDown():
-    private fun handleTouchDown(x: Int, y: Int, pointerId: Int) {
-        val correctedX = x + (settings?.touchCorrectionX ?: 0f).toInt()
-        val correctedY = y + (settings?.touchCorrectionY ?: 0f).toInt()
-        val key = keyboard?.getKeyAt(correctedX.toFloat(), correctedY.toFloat()) ?: return
-        // ...
-    }
-    ```
-  - **SUCCESS CRITERIA:** Touch input respects correction offsets from settings
+  - **DEPENDENCIES:** Task 2.1
+  - **CHANGES:**
+    - Line ~399: Replace `0xFF6A5ACD.toInt()` with `Constants.DEFAULT_ACCENT_COLOR`
+    - Line ~410: Replace `0xFFCCCCCC.toInt()` with `Constants.TEXT_COLOR_DARK_THEME`
+    - Line ~410: Replace `0xFF333333.toInt()` with `Constants.TEXT_COLOR_LIGHT_THEME`
+  - **SUCCESS CRITERIA:** No hardcoded color values in onDraw()
 
-- [ ] **3.2 Load and pass settings in CustomKeyboardService.kt**
-  - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardService.kt`
-  - **DEPENDENCIES:** Tasks 2.4, 3.1
-  - **PSEUDO-CODE:**
-    ```kotlin
-    private var settings: KeyboardSettings? = null
-    
-    override fun onCreate() {
-        // ... existing code
-        settings = SettingsManager.loadSettings(this) { error ->
-            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, error)
-        }
-    }
-    
-    // Pass settings to keyboard views after creation
-    keyboardView?.updateSettings(settings!!)
-    floatingKeyboardView?.updateSettings(settings!!)
-    ```
-  - **SUCCESS CRITERIA:** Settings are loaded once at service start and passed to views
+- [ ] **2.3 Update ClassFunctionsPopups.kt to use margin constant**
+  - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/ClassFunctionsPopups.kt`
+  - **DEPENDENCIES:** Task 2.1
+  - **CHANGES:**
+    - Replace `y = 50` with `y = Constants.ERROR_POPUP_MARGIN_TOP`
+  - **SUCCESS CRITERIA:** Magic number eliminated
 
 ---
 
-### Task 4: Documentation Update
-- [ ] **4.1 Update reference.md with settings documentation**
-  - **TARGET FILE:** `app/src/main/res/raw/reference.md`
-  - **DEPENDENCIES:** Tasks 2.1, 2.2
-  - **PSEUDO-CODE:**
-    ```markdown
-    ## Settings File (settings.json)
-    
-    | Attribute | Type | Default | Description |
-    |-----------|------|---------|-------------|
-    | touchCorrectionX | Float | 0.0 | Horizontal touch offset in logical units |
-    | touchCorrectionY | Float | 0.0 | Vertical touch offset in logical units |
-    | ... (all other settings)
+### Task 3: Remove Unused Code (MEDIUM PRIORITY)
+- [ ] **3.1 Remove unused color fields in CustomKeyboardView.kt**
+  - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardView.kt`
+  - **DEPENDENCIES:** None
+  - **LINES TO REMOVE (~37-40):**
+    ```kotlin
+    private val keyTextColor = context.resources.getColor(R.color.key_text_color, null)
+    private val keySmallTextColor = context.resources.getColor(R.color.key_small_text_color, null)
+    private val keyBackgroundColor = context.resources.getColor(R.color.key_background_color, null)
+    private val keyModifierBackgroundColor = context.resources.getColor(R.color.key_background_color_modifier, null)
     ```
-  - **SUCCESS CRITERIA:** All settings attributes documented with types and defaults
+  - **SUCCESS CRITERIA:** No compiler warnings about unused variables; app still renders correctly
+
+---
+
+### Task 4: Consolidate Duplicate Code (MEDIUM PRIORITY)
+- [ ] **4.1 Consolidate fallback layout loading methods**
+  - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardService.kt`
+  - **DEPENDENCIES:** None
+  - **REFACTOR:**
+    Replace `loadFallbackLanguageLayout()`, `loadFallbackServiceLayout()`, `loadFallbackClipboardLayout()` with:
+    ```kotlin
+    private fun loadFallbackLayout(resourceId: Int, layoutName: String): CustomKeyboard {
+        return try {
+            val json = resources.openRawResource(resourceId).bufferedReader().use { it.readText() }
+            CustomKeyboard.fromJson(this, json, settings)
+                ?: throw Exception("Parsed fallback $layoutName layout is null")
+        } catch (e: Exception) {
+            val errorMsg = "Error loading fallback $layoutName layout: ${e.message}"
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
+            throw e
+        }
+    }
+    ```
+  - **UPDATE CALLERS in handleFallback():**
+    ```kotlin
+    "Language" -> loadFallbackLayout(R.raw.keyboard_default, "language")
+    "Service" -> loadFallbackLayout(R.raw.keyboard_service, "service")
+    "Clipboard" -> loadFallbackLayout(R.raw.keyboard_clipboard_default, "clipboard")
+    ```
+  - **SUCCESS CRITERIA:** Three methods reduced to one; all fallbacks still work
+
+---
+
+### Task 5: Add Rendering Factor Constants (LOW PRIORITY - OPTIONAL)
+- [ ] **5.1 Add text size factor constants to Constants.kt**
+  - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/Constants.kt`
+  - **DEPENDENCIES:** None
+  - **CONTENT TO ADD:**
+    ```kotlin
+    // Rendering text size factors (relative to key height)
+    const val TEXT_SIZE_FACTOR_ICON = 0.6f
+    const val TEXT_SIZE_FACTOR_SMALL_LABEL = 0.32f
+    const val TEXT_SIZE_FACTOR_PRIMARY_LABEL = 0.37f
+    const val TEXT_SIZE_FACTOR_CENTERED_LABEL = 0.5f
+    const val TEXT_SIZE_FACTOR_MODIFIER_LABEL = 0.4f
+    const val SMALL_LABEL_Y_POSITION_FACTOR = 0.35f
+    const val LABEL_Y_OFFSET_FACTOR = 0.3f
+    const val CLIPBOARD_KEY_PADDING_FACTOR = 0.1f
+    ```
+  - **SUCCESS CRITERIA:** Constants defined and ready for use
+
+- [ ] **5.2 Update CustomKeyboardView.kt to use rendering constants**
+  - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardView.kt`
+  - **DEPENDENCIES:** Task 5.1
+  - **CHANGES:** Replace all magic float values in onDraw() with Constants references
+  - **SUCCESS CRITERIA:** No magic floats in rendering code
 
 ---
 
 ## 4. CONSTRAINTS
 
-1. **Serialization:** Use `kotlinx.serialization` for all JSON parsing
-2. **Null Safety:** Use `?.` and `?:` operators; never use `!!` except where guaranteed
-3. **Backwards Compatibility:** App must work without settings.json file (use defaults)
-4. **Error Handling:** All file operations must have error callbacks
-5. **Single Source of Truth:** Settings values should come from `KeyboardSettings` object, not `Constants` directly (except as defaults)
-6. **File Locations:**
-   - User settings: `Android/media/com.roalyr.customkeyboardengine/settings.json`
-   - Default settings: `res/raw/settings_default.json`
+1. **No Functional Changes:** This is a refactoring sprint - behavior must remain identical
+2. **Null Safety:** Maintain all existing null-safe patterns
+3. **Resource Naming:** Use snake_case for string resources (e.g., `btn_grant_storage`)
+4. **Testing:** After each task, verify app builds and runs correctly
+5. **Backwards Compatibility:** String resources should not break existing functionality
+6. **Incremental Commits:** Each task should be a separate logical unit
+
+---
+
+## 5. VERIFICATION CHECKLIST
+
+After completing all tasks:
+- [ ] `./gradlew assembleDebug` succeeds
+- [ ] App launches without crashes
+- [ ] All buttons in ActivityMain work correctly
+- [ ] Keyboard renders correctly (standard and floating modes)
+- [ ] Error popups display correctly
+- [ ] Fallback layouts load when needed
+- [ ] No compiler warnings about unused variables
+
+---
+
+## 6. TASK PRIORITY ORDER
+
+Execute in this order:
+1. Task 1.1 (strings.xml) - Foundation for other string tasks
+2. Task 2.1 (color constants) - Foundation for other constant tasks
+3. Task 3.1 (remove unused code) - Quick win
+4. Task 1.2, 1.3 (use string resources) - Depends on 1.1
+5. Task 2.2, 2.3 (use color constants) - Depends on 2.1
+6. Task 4.1 (consolidate fallbacks) - Independent refactor
+7. Task 5.1, 5.2 (rendering constants) - Optional enhancement

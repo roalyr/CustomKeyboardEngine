@@ -127,10 +127,13 @@ object SettingsManager {
         val settings = if (userFile.exists()) {
             try {
                 val content = userFile.readText()
-                android.util.Log.d(TAG, "Settings file content: $content")
+                android.util.Log.d(TAG, "Settings file size: ${content.length} chars")
                 json.decodeFromString<KeyboardSettings>(content)
             } catch (e: Exception) {
-                onError("$TAG: Failed to parse ${Constants.SETTINGS_FILENAME}: ${e.message}")
+                onError(
+                    "Failed to parse ${Constants.SETTINGS_FILENAME} at ${userFile.absolutePath}: ${e.message}. " +
+                        "Falling back to defaults."
+                )
                 loadDefaultSettings(context, onError)
             }
         } else {
@@ -163,7 +166,10 @@ object SettingsManager {
                 .use { it.readText() }
             json.decodeFromString<KeyboardSettings>(text)
         } catch (e: Exception) {
-            onError("$TAG: Failed to parse default settings resource: ${e.message}")
+            onError(
+                "Failed to parse built-in default settings resource (R.raw.settings_default): ${e.message}. " +
+                    "Using hardcoded defaults."
+            )
             KeyboardSettings() // Hard-coded fallback; never null
         }
     }

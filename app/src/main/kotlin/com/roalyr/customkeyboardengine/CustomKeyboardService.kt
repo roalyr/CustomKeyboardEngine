@@ -12,6 +12,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
+import android.os.Handler
+import android.os.Looper
 import java.io.File
 
 class CustomKeyboardService : InputMethodService() {
@@ -53,6 +55,8 @@ class CustomKeyboardService : InputMethodService() {
 
     private lateinit var settings: KeyboardSettings
 
+    private var lastSettingsError: String? = null
+
 
     companion object {
         private const val TAG = "CustomKeyboardService"
@@ -77,7 +81,11 @@ class CustomKeyboardService : InputMethodService() {
 
     private fun loadKeyboardSettings() {
         settings = SettingsManager.loadSettings(this) { error ->
-            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, error)
+            if (error == lastSettingsError) return@loadSettings
+            lastSettingsError = error
+            Handler(Looper.getMainLooper()).post {
+                ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, error)
+            }
         }
     }
 

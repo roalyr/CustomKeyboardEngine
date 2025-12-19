@@ -55,6 +55,8 @@ class CustomKeyboardView @JvmOverloads constructor(
     private var renderedWidth = 0f
     private var renderedHeight = 0f
 
+    // Settings from SettingsManager
+    private var settings: KeyboardSettings = KeyboardSettings()
 
     private var keyboardActionListener: OnKeyboardActionListener? = null
     private var isShiftOn = false
@@ -101,6 +103,15 @@ class CustomKeyboardView @JvmOverloads constructor(
         this.keyboard = keyboard
         keys = keyboard.getAllKeys()
         invalidateAllKeys()
+    }
+
+    /**
+     * Updates the keyboard settings used for rendering.
+     * @param settings The [KeyboardSettings] to apply.
+     */
+    fun updateSettings(settings: KeyboardSettings) {
+        this.settings = settings
+        invalidate()
     }
 
     // Handle events
@@ -414,21 +425,21 @@ class CustomKeyboardView @JvmOverloads constructor(
         val scaleX = width.toFloat() / keyboard.totalLogicalWidth
         val scaleY = height.toFloat() / keyboard.totalLogicalHeight
 
-        // Rendered gaps
-        val renderedKeyGap = 5f // Adjust horizontal gap in px
-        val renderedRowGap = 5f // Adjust vertical gap in px
+        // Rendered gaps from settings
+        val renderedKeyGap = settings.renderedKeyGap
+        val renderedRowGap = settings.renderedRowGap
 
         var currentY = 0f
 
         keyboard.rows.forEach { row ->
-            val rowHeight = row.defaultKeyHeight?.times(scaleY) ?: (Constants.DEFAULT_KEY_HEIGHT * scaleY)
-            val logicalRowGap = row.logicalRowGap?.times(scaleY) ?: (Constants.DEFAULT_LOGICAL_ROW_GAP * scaleY)
+            val rowHeight = row.defaultKeyHeight?.times(scaleY) ?: (settings.defaultKeyHeight * scaleY)
+            val logicalRowGap = row.logicalRowGap?.times(scaleY) ?: (settings.defaultLogicalRowGap * scaleY)
             var currentX = 0f
 
             row.keys.forEach { key ->
-                val logicalKeyWidth = key.keyWidth?.times(scaleX) ?: (row.defaultKeyWidth?.times(scaleX) ?: (Constants.DEFAULT_KEY_WIDTH * scaleX))
+                val logicalKeyWidth = key.keyWidth?.times(scaleX) ?: (row.defaultKeyWidth?.times(scaleX) ?: (settings.defaultKeyWidth * scaleX))
                 val logicalKeyHeight = key.keyHeight?.times(scaleY) ?: rowHeight
-                val logicalKeyGap = key.logicalKeyGap?.times(scaleX) ?: (row.defaultLogicalKeyGap?.times(scaleX) ?: (Constants.DEFAULT_LOGICAL_KEY_GAP * scaleX))
+                val logicalKeyGap = key.logicalKeyGap?.times(scaleX) ?: (row.defaultLogicalKeyGap?.times(scaleX) ?: (settings.defaultLogicalKeyGap * scaleX))
 
                 // Adjust for rendered gaps
                 val rectKeyX = currentX + renderedKeyGap / 2
@@ -439,114 +450,116 @@ class CustomKeyboardView @JvmOverloads constructor(
                 // Define key bounds
                 val keyBounds = RectF(rectKeyX, rectKeyY, rectKeyX + rectKeyWidth, rectKeyY + rectKeyHeight)
 
-                // Define corner radius
-                val cornerRadius = rectKeyHeight * 0.1f
+                // Define corner radius from settings
+                val cornerRadius = rectKeyHeight * settings.keyCornerRadiusFactor
 
                 // Draw key background
                 paint.color = if (key.isModifier == true) keyModifierBackgroundColor else keyBackgroundColor
                 canvas.drawRoundRect(keyBounds, cornerRadius, cornerRadius, paint)
 
-                // --- Draw icon if present ---
-                key.icon?.let { iconName ->
-                    val drawable = getIconDrawable(iconName)
-                    drawable?.let {
-                        // TODO: add key icon / label size overrides
-                        val iconSize = (rectKeyHeight * 0.6f).toInt()
-                        val iconLeft = rectKeyX.toInt() + ((rectKeyWidth - iconSize) / 2).toInt()
-                        val iconTop = rectKeyY.toInt() + ((rectKeyHeight - iconSize) / 2).toInt()
-                        it.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize)
+                // --- Draw content if any ---
+                if (shouldRenderKey(key)) {
+                    key.icon?.let { iconName ->
+                        val drawable = getIconDrawable(iconName)
+                        drawable?.let {
+                            // TODO: add key icon / label size overrides
+                            val iconSize = (rectKeyHeight * 0.6f).toInt()
+                            val iconLeft = rectKeyX.toInt() + ((rectKeyWidth - iconSize) / 2).toInt()
+                            val iconTop = rectKeyY.toInt() + ((rectKeyHeight - iconSize) / 2).toInt()
+                            it.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize)
 
-                        // Modulate the icon color by setting a color filter directly on the drawable
-                        it.colorFilter = PorterDuffColorFilter(
-                            if (key.isModifier == true) keyModifierIconColor else keyIconColor,
-                            PorterDuff.Mode.SRC_IN
-                        )
+                            // Modulate the icon color by setting a color filter directly on the drawable
+                            it.colorFilter = PorterDuffColorFilter(
+                                if (key.isModifier == true) keyModifierIconColor else keyIconColor,
+                                PorterDuff.Mode.SRC_IN
+                            )
 
-                        // Draw the drawable
-                        it.draw(canvas)
-                    }
-                } ?: run {
-                    // Check if small label exists
-                    if (key.labelLongPress != null) {
-                        // --- Draw small label (secondary text) ---
-                        key.labelLongPress.let {
-                            paint.color = if (key.isModifier == true) keyModifierSmallLabelTextColor else keyLabelLongPressTextColor
-                            paint.textSize = rectKeyHeight * 0.32f
-                            paint.textAlign = Paint.Align.CENTER
-
-                            // Transform the small label dynamically based on meta states
-                            val renderedSmallLabel = updateSmallLabelState(key) ?: ""
-
-                            // Draw the small label if it's not empty
-                            if (renderedSmallLabel.isNotEmpty()) {
-                                canvas.drawText(
-                                    renderedSmallLabel,
-                                    keyBounds.centerX(),
-                                    keyBounds.top + rectKeyHeight * 0.35f, // Upper half position
-                                    paint
-                                )
-                            }
+                            // Draw the drawable
+                            it.draw(canvas)
                         }
+                    } ?: run {
+                        // Check if small label exists
+                        if (key.labelLongPress != null) {
+                            // --- Draw small label (secondary text) ---
+                            key.labelLongPress.let {
+                                paint.color = if (key.isModifier == true) keyModifierSmallLabelTextColor else keyLabelLongPressTextColor
+                                paint.textSize = rectKeyHeight * 0.32f
+                                paint.textAlign = Paint.Align.CENTER
 
-                        // --- Draw primary label (main text) ---
-                        key.label?.let {
-                            paint.color = if (key.isModifier == true) keyModifierLabelTextColor else keyLabelTextColor
-                            paint.textSize = rectKeyHeight * 0.37f
-                            paint.textAlign = Paint.Align.CENTER
+                                // Transform the small label dynamically based on meta states
+                                val renderedSmallLabel = updateSmallLabelState(key) ?: ""
 
-                            // Transform the label dynamically based on meta states
-                            var renderedLabel = updateLabelState(key) ?: ""
-
-                            var textX = keyBounds.centerX()
-
-                            // Dynamically set label if the key is a clipboard key
-                            if (key.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY) {
-                                paint.textAlign = Paint.Align.LEFT
-                                // Correct the padding issue by adjusting the starting position
-                                textX = keyBounds.left + rectKeyHeight * 0.1f // Minimal padding from the left
-                                key.label = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is committed
-                                renderedLabel = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is rendered
+                                // Draw the small label if it's not empty
+                                if (renderedSmallLabel.isNotEmpty()) {
+                                    canvas.drawText(
+                                        renderedSmallLabel,
+                                        keyBounds.centerX(),
+                                        keyBounds.top + rectKeyHeight * 0.35f, // Upper half position
+                                        paint
+                                    )
+                                }
                             }
 
-                            // Draw the label if it's not empty
-                            if (renderedLabel.isNotEmpty()) {
-                                canvas.drawText(
-                                    renderedLabel,
-                                    textX,
-                                    keyBounds.centerY() + rectKeyHeight * 0.3f, // Slightly lower in the middle half
-                                    paint
-                                )
+                            // --- Draw primary label (main text) ---
+                            key.label?.let {
+                                paint.color = if (key.isModifier == true) keyModifierLabelTextColor else keyLabelTextColor
+                                paint.textSize = rectKeyHeight * 0.37f
+                                paint.textAlign = Paint.Align.CENTER
+
+                                // Transform the label dynamically based on meta states
+                                var renderedLabel = updateLabelState(key) ?: ""
+
+                                var textX = keyBounds.centerX()
+
+                                // Dynamically set label if the key is a clipboard key
+                                if (key.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY) {
+                                    paint.textAlign = Paint.Align.LEFT
+                                    // Correct the padding issue by adjusting the starting position
+                                    textX = keyBounds.left + rectKeyHeight * 0.1f // Minimal padding from the left
+                                    key.label = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is committed
+                                    renderedLabel = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is rendered
+                                }
+
+                                // Draw the label if it's not empty
+                                if (renderedLabel.isNotEmpty()) {
+                                    canvas.drawText(
+                                        renderedLabel,
+                                        textX,
+                                        keyBounds.centerY() + rectKeyHeight * 0.3f, // Slightly lower in the middle half
+                                        paint
+                                    )
+                                }
                             }
-                        }
-                    } else {
-                        // --- Draw primary label only (centered) ---
-                        key.label?.let {
-                            paint.color = if (key.isModifier == true) keyModifierLabelTextColor else keyLabelTextColor
-                            paint.textSize = if (key.isModifier == true) rectKeyHeight * 0.4f else rectKeyHeight * 0.5f
-                            paint.textAlign = Paint.Align.CENTER
+                        } else {
+                            // --- Draw primary label only (centered) ---
+                            key.label?.let {
+                                paint.color = if (key.isModifier == true) keyModifierLabelTextColor else keyLabelTextColor
+                                paint.textSize = if (key.isModifier == true) rectKeyHeight * 0.4f else rectKeyHeight * 0.5f
+                                paint.textAlign = Paint.Align.CENTER
 
-                            // Transform the label dynamically based on meta states
-                            var renderedLabel = updateLabelState(key) ?: ""
+                                // Transform the label dynamically based on meta states
+                                var renderedLabel = updateLabelState(key) ?: ""
 
-                            var textX = keyBounds.centerX()
+                                var textX = keyBounds.centerX()
 
-                            // Dynamically set label if the key is a clipboard key
-                            if (key.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY) {
-                                paint.textAlign = Paint.Align.LEFT
-                                // Correct the padding issue by adjusting the starting position
-                                textX = keyBounds.left + rectKeyHeight * 0.1f // Minimal padding from the left
-                                key.label = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is committed
-                                renderedLabel = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is rendered
-                            }
+                                // Dynamically set label if the key is a clipboard key
+                                if (key.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY) {
+                                    paint.textAlign = Paint.Align.LEFT
+                                    // Correct the padding issue by adjusting the starting position
+                                    textX = keyBounds.left + rectKeyHeight * 0.1f // Minimal padding from the left
+                                    key.label = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is committed
+                                    renderedLabel = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is rendered
+                                }
 
-                            // Draw the label if it's not empty
-                            if (renderedLabel.isNotEmpty()) {
-                                canvas.drawText(
-                                    renderedLabel,
-                                    textX,
-                                    keyBounds.centerY() + (paint.textSize / 3), // Centered vertically
-                                    paint
-                                )
+                                // Draw the label if it's not empty
+                                if (renderedLabel.isNotEmpty()) {
+                                    canvas.drawText(
+                                        renderedLabel,
+                                        textX,
+                                        keyBounds.centerY() + (paint.textSize / 3), // Centered vertically
+                                        paint
+                                    )
+                                }
                             }
                         }
                     }
@@ -559,6 +572,10 @@ class CustomKeyboardView @JvmOverloads constructor(
             // Increment Y for the next row
             currentY += rowHeight + logicalRowGap
         }
+    }
+
+    private fun shouldRenderKey(key: Key): Boolean {
+        return !key.icon.isNullOrEmpty() || !key.label.isNullOrEmpty() || !key.labelLongPress.isNullOrEmpty()
     }
 
     // Adjust Color Method

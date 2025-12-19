@@ -51,6 +51,8 @@ class CustomKeyboardService : InputMethodService() {
     }
     private var isClipboardOpen = false
 
+    private lateinit var settings: KeyboardSettings
+
 
     companion object {
         private const val TAG = "CustomKeyboardService"
@@ -68,8 +70,15 @@ class CustomKeyboardService : InputMethodService() {
     override fun onCreate() {
         initWindowManager()
         initClipboardManager()
+        loadKeyboardSettings()
         CustomKeyboardClipboard.ensureMapSize(Constants.CLIPBOARD_MAX_SIZE)
         super.onCreate()
+    }
+
+    private fun loadKeyboardSettings() {
+        settings = SettingsManager.loadSettings(this) { error ->
+            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, error)
+        }
     }
 
     override fun onDestroy() {
@@ -138,6 +147,7 @@ class CustomKeyboardService : InputMethodService() {
 
         return layout?.let { (customKeyboard) ->
             keyboardView?.updateKeyboard(customKeyboard)
+            keyboardView?.updateSettings(settings)
 
             // Initialize and synchronize clipboard keys
             val clipboardKeys = customKeyboard.getAllKeys().filter { it.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY }
@@ -229,6 +239,7 @@ class CustomKeyboardService : InputMethodService() {
             if (customKeyboardPair != null) {
                 val (customKeyboard) = customKeyboardPair
                 view.updateKeyboard(customKeyboard)
+                view.updateSettings(settings)
                 setKeyboardActionListener(view)
 
             } else {
@@ -386,7 +397,7 @@ class CustomKeyboardService : InputMethodService() {
     private fun resizeFloatingKeyboard(increment: Int) {
         if (isFloatingKeyboardOpen) {
             floatingKeyboardWidth = (floatingKeyboardWidth + increment)
-                .coerceIn(Constants.KEYBOARD_MINIMAL_WIDTH, screenWidth)
+                .coerceIn(settings.keyboardMinimalWidth, screenWidth)
 
             floatingKeyboardView?.let { view ->
                 val layoutParams = view.layoutParams as WindowManager.LayoutParams
@@ -508,8 +519,12 @@ class CustomKeyboardService : InputMethodService() {
     private fun handleKey(code: Int?, label: CharSequence?) {
         //Log.d("Inject", "$code, $label, $modifiedMetaState")
 
+        // Defensive: if the key has neither a usable code nor a label, do nothing.
+        val isIgnorableCode = (code == null || code == Constants.KEYCODE_IGNORE)
+        if (isIgnorableCode && label.isNullOrBlank()) return
+
         // Manually apply metaState to the key event if key code is written in layout.
-        if (code != null) {
+        if (code != null && code != Constants.KEYCODE_IGNORE) {
             injectKeyEvent(code, modifiedMetaState)
         } else {
             // If no key codes for a key - attempt to get key code from label.
@@ -558,16 +573,16 @@ class CustomKeyboardService : InputMethodService() {
                 }
 
                 Constants.KEYCODE_SWITCH_KEYBOARD_MODE -> switchKeyboardMode()
-                Constants.KEYCODE_ENLARGE_FLOATING_KEYBOARD -> resizeFloatingKeyboard(+Constants.KEYBOARD_SCALE_INCREMENT)
-                Constants.KEYCODE_SHRINK_FLOATING_KEYBOARD -> resizeFloatingKeyboard(-Constants.KEYBOARD_SCALE_INCREMENT)
-                Constants.KEYCODE_MOVE_FLOATING_KEYBOARD_LEFT -> translateFloatingKeyboard(-Constants.KEYBOARD_TRANSLATION_INCREMENT)
+                Constants.KEYCODE_ENLARGE_FLOATING_KEYBOARD -> resizeFloatingKeyboard(+settings.keyboardScaleIncrement)
+                Constants.KEYCODE_SHRINK_FLOATING_KEYBOARD -> resizeFloatingKeyboard(-settings.keyboardScaleIncrement)
+                Constants.KEYCODE_MOVE_FLOATING_KEYBOARD_LEFT -> translateFloatingKeyboard(-settings.keyboardTranslationIncrement)
                 Constants.KEYCODE_MOVE_FLOATING_KEYBOARD_RIGHT -> translateFloatingKeyboard(
-                    Constants.KEYBOARD_TRANSLATION_INCREMENT
+                    settings.keyboardTranslationIncrement
                 )
 
-                Constants.KEYCODE_MOVE_FLOATING_KEYBOARD_UP -> translateVertFloatingKeyboard(-Constants.KEYBOARD_TRANSLATION_INCREMENT)
+                Constants.KEYCODE_MOVE_FLOATING_KEYBOARD_UP -> translateVertFloatingKeyboard(-settings.keyboardTranslationIncrement)
                 Constants.KEYCODE_MOVE_FLOATING_KEYBOARD_DOWN -> translateVertFloatingKeyboard(
-                    Constants.KEYBOARD_TRANSLATION_INCREMENT
+                    settings.keyboardTranslationIncrement
                 )
 
                 Constants.KEYCODE_CYCLE_LANGUAGE_LAYOUT -> {
@@ -576,8 +591,9 @@ class CustomKeyboardService : InputMethodService() {
 
                 Constants.KEYCODE_CLIPBOARD_ENTRY -> {
                     // Commit the label of the pressed key
-                    label.let {
-                        currentInputConnection.commitText(it, 1)
+                    val text = label?.toString().orEmpty()
+                    if (text.isNotEmpty()) {
+                        currentInputConnection.commitText(text, 1)
                     }
                 }
                 Constants.KEYCODE_CLIPBOARD_ERASE -> {
@@ -729,6 +745,10 @@ class CustomKeyboardService : InputMethodService() {
     ////////////////////////////////////////////
     // Keyboard reloading
     private fun reloadKeyboardLayouts() {
+        // Reload settings on layout reload
+        SettingsManager.reloadSettings()
+        loadKeyboardSettings()
+
         // Clear existing layouts
         languageLayouts.clear()
         serviceLayouts.clear()
@@ -806,7 +826,7 @@ class CustomKeyboardService : InputMethodService() {
 
         files.forEach { file ->
             try {
-                CustomKeyboard.fromJsonFile(this, file) { error ->
+                CustomKeyboard.fromJsonFile(this, file, settings) { error ->
                     ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, error)
                     handleFallback(layoutType, onFallback)
                 }?.let { keyboard ->
@@ -840,7 +860,7 @@ class CustomKeyboardService : InputMethodService() {
     private fun loadFallbackLanguageLayout(): CustomKeyboard {
         return try {
             val json = resources.openRawResource(R.raw.keyboard_default).bufferedReader().use { it.readText() }
-            CustomKeyboard.fromJson(this, json).also {
+            CustomKeyboard.fromJson(this, json, settings).also {
                 //Log.i(TAG, "Fallback language layout loaded successfully.")
             } ?: throw Exception("Parsed fallback language layout is null")
         } catch (e: Exception) {
@@ -853,7 +873,7 @@ class CustomKeyboardService : InputMethodService() {
     private fun loadFallbackServiceLayout(): CustomKeyboard {
         return try {
             val json = resources.openRawResource(R.raw.keyboard_service).bufferedReader().use { it.readText() }
-            CustomKeyboard.fromJson(this, json).also {
+            CustomKeyboard.fromJson(this, json, settings).also {
                 //Log.i(TAG, "Fallback service layout loaded successfully.")
             } ?: throw Exception("Parsed fallback service layout is null")
         } catch (e: Exception) {
@@ -866,7 +886,7 @@ class CustomKeyboardService : InputMethodService() {
     private fun loadFallbackClipboardLayout(): CustomKeyboard {
         return try {
             val json = resources.openRawResource(R.raw.keyboard_clipboard_default).bufferedReader().use { it.readText() }
-            CustomKeyboard.fromJson(this, json).also {
+            CustomKeyboard.fromJson(this, json, settings).also {
                 //Log.i(TAG, "Fallback service layout loaded successfully.")
             } ?: throw Exception("Parsed fallback clipboard layout is null")
         } catch (e: Exception) {

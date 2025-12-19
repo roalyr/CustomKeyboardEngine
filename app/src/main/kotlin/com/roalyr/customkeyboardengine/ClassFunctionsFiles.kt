@@ -3,6 +3,7 @@ package com.roalyr.customkeyboardengine
 import android.content.Context
 import android.content.res.Resources
 import android.view.WindowManager
+import kotlinx.serialization.json.Json
 import java.io.File
 
 class ClassFunctionsFiles {
@@ -87,5 +88,92 @@ class ClassFunctionsFiles {
                 false
             }
         }
+    }
+}
+
+object SettingsManager {
+    private const val TAG = "SettingsManager"
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+        explicitNulls = false
+    }
+
+    @Volatile
+    private var cachedSettings: KeyboardSettings? = null
+
+    /**
+     * Loads keyboard settings from user file or defaults with caching.
+     *
+     * Attempts to load `settings.json` from the media directory. If the file doesn't exist
+     * or parsing fails, falls back to built-in defaults from `R.raw.settings_default`.
+     * Result is cached for subsequent calls.
+     *
+     * @param context Android context for resource access.
+     * @param onError Callback invoked if parsing fails (receives error message).
+     * @return [KeyboardSettings] instance with user or default values (never null).
+     */
+    fun loadSettings(
+        context: Context,
+        onError: (String) -> Unit
+    ): KeyboardSettings {
+        cachedSettings?.let { return it }
+
+        val userFile = File(Constants.MEDIA_SETTINGS_FILE)
+        android.util.Log.d(TAG, "Looking for settings at: ${userFile.absolutePath}")
+        android.util.Log.d(TAG, "File exists: ${userFile.exists()}")
+        
+        val settings = if (userFile.exists()) {
+            try {
+                val content = userFile.readText()
+                android.util.Log.d(TAG, "Settings file content: $content")
+                json.decodeFromString<KeyboardSettings>(content)
+            } catch (e: Exception) {
+                onError("$TAG: Failed to parse ${Constants.SETTINGS_FILENAME}: ${e.message}")
+                loadDefaultSettings(context, onError)
+            }
+        } else {
+            android.util.Log.d(TAG, "Settings file not found, using defaults")
+            loadDefaultSettings(context, onError)
+        }
+
+        android.util.Log.d(TAG, "Loaded settings: $settings")
+        cachedSettings = settings
+        return settings
+    }
+
+    /**
+     * Loads built-in default settings from resources.
+     *
+     * Falls back to hard-coded [KeyboardSettings]() constructor if resource parsing fails,
+     * ensuring settings are always available (never null).
+     *
+     * @param context Android context for resource access.
+     * @param onError Callback invoked if resource parsing fails (receives error message).
+     * @return [KeyboardSettings] instance with default values (never null).
+     */
+    private fun loadDefaultSettings(
+        context: Context,
+        onError: (String) -> Unit
+    ): KeyboardSettings {
+        return try {
+            val text = context.resources.openRawResource(R.raw.settings_default)
+                .bufferedReader()
+                .use { it.readText() }
+            json.decodeFromString<KeyboardSettings>(text)
+        } catch (e: Exception) {
+            onError("$TAG: Failed to parse default settings resource: ${e.message}")
+            KeyboardSettings() // Hard-coded fallback; never null
+        }
+    }
+
+    /**
+     * Clears the cached settings, forcing a reload on the next [loadSettings] call.
+     *
+     * Useful when settings file has been updated externally and should be re-read.
+     */
+    fun reloadSettings() {
+        cachedSettings = null
     }
 }

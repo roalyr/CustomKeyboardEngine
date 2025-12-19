@@ -43,11 +43,29 @@ class Constants {
         const val DEFAULT_LOGICAL_KEY_GAP = 0f // Percentage of row width
         const val TOTAL_LOGICAL_WIDTH = 100f
 
+        // Rendering defaults.
+        const val DEFAULT_RENDERED_KEY_GAP = 5f
+        const val DEFAULT_RENDERED_ROW_GAP = 5f
+        const val DEFAULT_KEY_CORNER_RADIUS_FACTOR = 0.1f
+
         // Paths
         private const val APP_MEDIA_NAME = "com.roalyr.customkeyboardengine"
         private const val LAYOUTS_DIRECTORY_NAME = "layouts"
         private const val LAYOUTS_LANGUAGE_NAME = "layouts-language"
         private const val LAYOUTS_SERVICE_NAME = "layouts-service"
+
+        // Settings file constants
+        /**
+         * Filename for user-overridable settings (`settings.json`).
+         * Located at: `Android/media/com.roalyr.customkeyboardengine/settings.json`
+         */
+        const val SETTINGS_FILENAME = "settings.json"
+
+        /**
+         * Resource name for default settings (`R.raw.settings_default`).
+         * Used as fallback when user settings are missing or invalid.
+         */
+        const val SETTINGS_DEFAULT = "settings_default"
 
         val MEDIA_APP_DIRECTORY: String
             get() = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).parent}/Android/media/$APP_MEDIA_NAME/"
@@ -57,6 +75,9 @@ class Constants {
 
         val MEDIA_LAYOUTS_SERVICE_DIRECTORY: String
             get() = "$MEDIA_APP_DIRECTORY/$LAYOUTS_DIRECTORY_NAME/$LAYOUTS_SERVICE_NAME"
+
+        val MEDIA_SETTINGS_FILE: String
+            get() = "${MEDIA_APP_DIRECTORY}${SETTINGS_FILENAME}"
 
     }
 

@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.roalyr.customkeyboardengine.ui.theme.CustomKeyboardEngineTheme
+import java.io.File
 
 class ActivityMain : ComponentActivity() {
 
@@ -96,6 +97,14 @@ class ActivityMain : ComponentActivity() {
                             shape = MaterialTheme.shapes.medium
                         ) {
                             Text("4. Copy (rewrite) default layouts and reference manual to working folder")
+                        }
+
+                        Button(
+                            onClick = { copyDefaultSettings() },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Text("5. Copy (rewrite) default settings.json to working folder")
                         }
 
                         // Path Reference
@@ -203,6 +212,35 @@ class ActivityMain : ComponentActivity() {
     private fun copyDefaults() {
         if (ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(windowManager, this, resources)){
             Toast.makeText(this, "Default layouts and reference copied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Copies default settings.json from resources to the app working directory.
+     *
+     * Creates the media directory if it doesn't exist, then copies `R.raw.settings_default`
+     * to `Android/media/com.roalyr.customkeyboardengine/settings.json`. If the file already exists,
+     * it is overwritten.
+     *
+     * Shows toast notifications for success or failure.
+     */
+    private fun copyDefaultSettings() {
+        val appDir = File(Constants.MEDIA_APP_DIRECTORY)
+        if (!appDir.exists() && !appDir.mkdirs()) {
+            Toast.makeText(this, "Failed to create working folder", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val targetFile = File(Constants.MEDIA_SETTINGS_FILE)
+        try {
+            resources.openRawResource(R.raw.settings_default).use { inputStream ->
+                targetFile.outputStream().use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+            Toast.makeText(this, "Default settings.json copied", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to copy settings.json: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 }

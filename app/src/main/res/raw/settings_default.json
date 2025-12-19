@@ -1,0 +1,15 @@
+{
+  "keyboardMinimalWidth": 500,
+  "keyboardMinimalHeight": 500,
+  "keyboardTranslationIncrement": 50,
+  "keyboardScaleIncrement": 50,
+
+  "defaultKeyHeight": 40.0,
+  "defaultKeyWidth": 10.0,
+  "defaultLogicalRowGap": 0.0,
+  "defaultLogicalKeyGap": 0.0,
+
+  "renderedKeyGap": 5.0,
+  "renderedRowGap": 5.0,
+  "keyCornerRadiusFactor": 0.1
+}

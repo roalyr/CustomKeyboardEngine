@@ -78,6 +78,33 @@ Defines individual key attributes.
 
 ---
 
+## 4. KeyboardSettings (settings.json)
+
+Optional user-configurable settings file (`settings.json`) that provides default values for layouts.
+
+**Priority Cascade**: Layout JSON value > settings.json value > Built-in defaults.
+This means individual layouts can override settings.json values by specifying them explicitly.
+
+| Attribute                 | Type  | Default                              | Description                                                |
+|---------------------------|-------|--------------------------------------|------------------------------------------------------------|
+| `keyboardMinimalWidth`    | Int   | 500                                  | Minimum keyboard width in pixels                           |
+| `keyboardMinimalHeight`   | Int   | 500                                  | Minimum keyboard height in pixels                          |
+| `keyboardTranslationIncrement` | Int | 50                              | Pixel offset for floating keyboard movement               |
+| `keyboardScaleIncrement`  | Int   | 50                                   | Pixel increment for floating keyboard resizing             |
+| `defaultKeyHeight`        | Float | 40.0                                 | Default key height in DP (when not specified in layout)    |
+| `defaultKeyWidth`         | Float | 10.0                                 | Default key width as percentage of row width               |
+| `defaultLogicalRowGap`    | Float | 0.0                                  | Default vertical gap between rows in DP                    |
+| `defaultLogicalKeyGap`    | Float | 0.0                                  | Default horizontal gap between keys as percentage          |
+| `renderedKeyGap`          | Float | 5.0                                  | Visual gap between keys on screen in pixels                |
+| `renderedRowGap`          | Float | 5.0                                  | Visual gap between rows on screen in pixels                |
+| `keyCornerRadiusFactor`   | Float | 0.1                                  | Corner radius multiplier (0.1 = 10% of key height)        |
+
+**File Location**: `Android/media/com.roalyr.customkeyboardengine/settings.json`
+
+If `settings.json` is missing or invalid, the app uses built-in defaults from `R.raw.settings_default`.
+
+---
+
 ## Available Icons
 
 An example of declaring a key icon: `"icon": "@drawable/ic_tab"`

@@ -96,6 +96,20 @@ class CustomKeyboardService : InputMethodService() {
         super.onStartInputView(info, restarting)
     }
 
+    override fun onFinishInputView(finishingInput: Boolean) {
+        super.onFinishInputView(finishingInput)
+        keyboardView?.cancelAllEvents()
+        floatingKeyboardView?.cancelAllEvents()
+        serviceKeyboardView?.cancelAllEvents()
+    }
+
+    override fun onWindowHidden() {
+        super.onWindowHidden()
+        keyboardView?.cancelAllEvents()
+        floatingKeyboardView?.cancelAllEvents()
+        serviceKeyboardView?.cancelAllEvents()
+    }
+
     private fun initClipboardManager() {
         clipboardManager = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         clipboardManager.addPrimaryClipChangedListener(clipboardListener)

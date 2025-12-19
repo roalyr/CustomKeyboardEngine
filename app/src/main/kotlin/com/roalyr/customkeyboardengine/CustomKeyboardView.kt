@@ -196,6 +196,33 @@ class CustomKeyboardView @JvmOverloads constructor(
         repeatKeyRunnable = null
     }
 
+    fun cancelAllEvents() {
+        cancelRepeatKey()
+        handler.removeMessages(MSG_LONGPRESS)
+        isKeyRepeated = false
+        isLongPressHandled = false
+        activeKeys.clear()
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        cancelAllEvents()
+    }
+
+    override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+        super.onWindowFocusChanged(hasWindowFocus)
+        if (!hasWindowFocus) {
+            cancelAllEvents()
+        }
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        if (visibility != VISIBLE) {
+            cancelAllEvents()
+        }
+    }
+
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         requestFocus()
@@ -256,7 +283,7 @@ class CustomKeyboardView @JvmOverloads constructor(
 
             MotionEvent.ACTION_CANCEL -> {
                 // Handle cancel action if necessary
-                //Log.d("TOUCH", "Action Cancel")
+                cancelAllEvents()
             }
         }
         return true

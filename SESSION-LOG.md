@@ -145,3 +145,20 @@ All tasks 2.1–2.5 reviewed, polished, and documented. Ready for integration te
 
 **Status: SPRINT 3 COMPLETE** ✅
 All architecture cleanup tasks reviewed, polished, and documented. Technical debt significantly reduced.
+
+---
+
+## 2025-12-19 (Touch Correction & Theme Settings)
+- [x] Task 1.1: Added `DEFAULT_TOUCH_CORRECTION_X` and `DEFAULT_TOUCH_CORRECTION_Y` constants to `Constants.kt` to support user-configurable touch offsets.
+- [x] Task 1.2: Added `touchCorrectionX` and `touchCorrectionY` properties to `KeyboardSettings` data class in `CustomKeyboard.kt` with safe defaults from `Constants`.
+- [x] Task 1.3: Updated `settings_default.json` with default touch correction values (0.0) to ensure schema consistency.
+- [x] Task 1.4: Applied touch correction offsets in `CustomKeyboardView.handleTouchDown` and `handleTouchMove`, allowing users to fine-tune touch detection.
+- [x] Task 1.5: Updated `reference.md` documentation to include `touchCorrectionX` and `touchCorrectionY` in the `KeyboardSettings` section.
+- [x] Task 3.1: Verified `CustomKeyboardView` already has `settings` property and `updateSettings()` method (equivalent to `setSettings`).
+- [x] Task 3.2: Verified `CustomKeyboardService` already passes settings to all keyboard views (standard, floating, and service) during initialization.
+- [x] Task 2.1: Added theme override constants (`THEME_MODE_SYSTEM`, `THEME_MODE_DARK`, `THEME_MODE_LIGHT`, `DEFAULT_CUSTOM_ACCENT_COLOR`) to `Constants.kt`.
+- [x] Task 2.2: Added `themeMode` (Int) and `customAccentColor` (String) properties to `KeyboardSettings` data class in `CustomKeyboard.kt`.
+- [x] Task 2.3: Updated `settings_default.json` with default theme settings (system mode, no custom accent).
+- [x] Task 2.4: Implemented theme and accent color overrides in `CustomKeyboardView.onDraw`, using `ColorUtils.parseHexColor` to support hex strings.
+- [x] Task 2.5: Updated `reference.md` documentation to include `themeMode` and `customAccentColor` (Hex format) and added a sorted "Example Accent Colors" table.
+- [x] Task 2.6: Created `ColorUtils.kt` to handle dynamic hex color parsing (supporting #RRGGBB and #AARRGGBB).

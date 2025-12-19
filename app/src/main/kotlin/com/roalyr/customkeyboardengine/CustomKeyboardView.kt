@@ -124,7 +124,9 @@ class CustomKeyboardView @JvmOverloads constructor(
     private val handler = Handler(Looper.getMainLooper(), handlerCallback)
 
     private fun handleTouchDown(x: Int, y: Int, pointerId: Int) {
-        val key = keyboard?.getKeyAt(x.toFloat(), y.toFloat()) ?: return
+        val correctedX = x + settings.touchCorrectionX.toInt()
+        val correctedY = y + settings.touchCorrectionY.toInt()
+        val key = keyboard?.getKeyAt(correctedX.toFloat(), correctedY.toFloat()) ?: return
 
         downKeyIndex = keys?.indexOf(key) ?: -1
         isLongPressHandled = false
@@ -303,8 +305,10 @@ class CustomKeyboardView @JvmOverloads constructor(
 
     // TODO: Swipes
     private fun handleTouchMove(x: Int, y: Int) {
+        val correctedX = x + settings.touchCorrectionX.toInt()
+        val correctedY = y + settings.touchCorrectionY.toInt()
         // Optional: Cancel repeat/long press if the finger moves off the key
-        if (keyboard?.getKeyAt(x.toFloat(), y.toFloat()) == null) {
+        if (keyboard?.getKeyAt(correctedX.toFloat(), correctedY.toFloat()) == null) {
             cancelRepeatKey()
             handler.removeMessages(MSG_LONGPRESS)
         }
@@ -388,14 +392,19 @@ class CustomKeyboardView @JvmOverloads constructor(
         val keyboard = keyboard ?: return
 
         // Resolve accent color or fallback to a soft violet-purple
-        val accentColor = context.resolveThemeColor(android.R.attr.colorAccent, Constants.DEFAULT_ACCENT_COLOR)
+        val accentColor = ColorUtils.parseHexColor(settings.customAccentColor)
+            ?: context.resolveThemeColor(android.R.attr.colorAccent, Constants.DEFAULT_ACCENT_COLOR)
 
         // Define colors based on theme
-        val isDarkTheme = try {
-            (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        } catch (e: Exception) {
-            Log.w("ThemeDetection", "Failed to detect UI mode, falling back to dark theme.")
-            true // Fallback to dark theme
+        val isDarkTheme = when (settings.themeMode) {
+            Constants.THEME_MODE_DARK -> true
+            Constants.THEME_MODE_LIGHT -> false
+            else -> try {
+                (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            } catch (e: Exception) {
+                Log.w("ThemeDetection", "Failed to detect UI mode, falling back to dark theme.")
+                true // Fallback to dark theme
+            }
         }
 
         val keyboardBackgroundColor = if (isDarkTheme) adjustColor(accentColor, 0.2f, 0.6f) else adjustColor(accentColor, 0.99f, 0.2f)

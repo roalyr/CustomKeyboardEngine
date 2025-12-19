@@ -98,8 +98,30 @@ This means individual layouts can override settings.json values by specifying th
 | `renderedKeyGap`          | Float | 5.0                                  | Visual gap between keys on screen in pixels                |
 | `renderedRowGap`          | Float | 5.0                                  | Visual gap between rows on screen in pixels                |
 | `keyCornerRadiusFactor`   | Float | 0.1                                  | Corner radius multiplier (0.1 = 10% of key height)        |
+| `touchCorrectionX`        | Float | 0.0                                  | Horizontal touch offset in logical pixels (positive = right) |
+| `touchCorrectionY`        | Float | 0.0                                  | Vertical touch offset in logical pixels (positive = down)    |
+| `themeMode`               | Int   | 0                                    | Theme override: 0=system, 1=force dark, 2=force light        |
+| `customAccentColor`       | String| ""                                   | Custom accent color as Hex string (e.g., "#6A5ACD")          |
 
 **File Location**: `Android/media/com.roalyr.customkeyboardengine/settings.json`
+
+### Example Accent Colors
+To use these colors, copy the **Hex Code** into the `customAccentColor` field in `settings.json`. Both `#RRGGBB` and `#AARRGGBB` formats are supported.
+
+| Color Name       | Hex Code  |
+|------------------|-----------|
+| Chocolate        | #D2691E   |
+| Crimson          | #DC143C   |
+| Dark Orchid      | #9932CC   |
+| Deep Sky Blue    | #00BFFF   |
+| Gold             | #FFD700   |
+| Hot Pink         | #FF69B4   |
+| Lime Green       | #32CD32   |
+| Medium Sea Green | #3CB371   |
+| Orange Red       | #FF4500   |
+| Soft Purple      | #6A5ACD   |
+| Steel Blue       | #4682B4   |
+| Tomato           | #FF6347   |
 
 If `settings.json` is missing or invalid, the app uses built-in defaults from `R.raw.settings_default`.
 

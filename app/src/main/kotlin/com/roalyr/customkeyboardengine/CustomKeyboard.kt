@@ -107,7 +107,15 @@ data class KeyboardSettings(
     // Rendering
     val renderedKeyGap: Float = Constants.DEFAULT_RENDERED_KEY_GAP,
     val renderedRowGap: Float = Constants.DEFAULT_RENDERED_ROW_GAP,
-    val keyCornerRadiusFactor: Float = Constants.DEFAULT_KEY_CORNER_RADIUS_FACTOR
+    val keyCornerRadiusFactor: Float = Constants.DEFAULT_KEY_CORNER_RADIUS_FACTOR,
+
+    // Touch correction (pixel offset applied to touch coordinates)
+    val touchCorrectionX: Float = Constants.DEFAULT_TOUCH_CORRECTION_X,
+    val touchCorrectionY: Float = Constants.DEFAULT_TOUCH_CORRECTION_Y,
+
+    // Theme overrides
+    val themeMode: Int = Constants.DEFAULT_THEME_MODE,        // 0=system, 1=dark, 2=light
+    val customAccentColor: String = Constants.DEFAULT_CUSTOM_ACCENT_COLOR  // Empty=system, else Hex string (#RRGGBB or #AARRGGBB)
 )
 
 

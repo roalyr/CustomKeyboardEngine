@@ -19,6 +19,10 @@ class Constants {
         const val KEYCODE_IGNORE = -1 // If this is assigned - commit label or small label
         const val CLIPBOARD_MAX_SIZE = 10 // Define maximum clipboard size
 
+        // Touch correction defaults (in pixels, applied after scaling)
+        const val DEFAULT_TOUCH_CORRECTION_X = 0f
+        const val DEFAULT_TOUCH_CORRECTION_Y = 0f
+
         // Custom keycodes.
         const val KEYCODE_CLOSE_FLOATING_KEYBOARD = -10
         const val KEYCODE_OPEN_FLOATING_KEYBOARD = -11
@@ -80,6 +84,13 @@ class Constants {
         const val SMALL_LABEL_Y_POSITION_FACTOR = 0.35f
         const val LABEL_Y_OFFSET_FACTOR = 0.3f
         const val CLIPBOARD_KEY_PADDING_FACTOR = 0.1f
+
+        // Theme override constants
+        const val THEME_MODE_SYSTEM = 0  // Follow system dark/light
+        const val THEME_MODE_DARK = 1    // Force dark theme
+        const val THEME_MODE_LIGHT = 2   // Force light theme
+        const val DEFAULT_THEME_MODE = THEME_MODE_SYSTEM
+        const val DEFAULT_CUSTOM_ACCENT_COLOR = ""  // Empty = use system accent
 
         // Paths
         private const val APP_MEDIA_NAME = "com.roalyr.customkeyboardengine"

@@ -11,5 +11,11 @@
 
   "renderedKeyGap": 5.0,
   "renderedRowGap": 5.0,
-  "keyCornerRadiusFactor": 0.1
+  "keyCornerRadiusFactor": 0.1,
+
+  "touchCorrectionX": 0.0,
+  "touchCorrectionY": 0.0,
+
+  "themeMode": 0,
+  "customAccentColor": ""
 }

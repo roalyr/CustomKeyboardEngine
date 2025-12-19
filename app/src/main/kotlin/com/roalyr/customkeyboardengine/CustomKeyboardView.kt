@@ -37,12 +37,6 @@ class CustomKeyboardView @JvmOverloads constructor(
     private var paint: Paint = Paint()
     private val iconCache = mutableMapOf<String, Drawable?>()
 
-    // TODO: Style data, move everything into json eventually.
-    private val keyTextColor = context.resources.getColor(R.color.key_text_color, null)
-    private val keySmallTextColor = context.resources.getColor(R.color.key_small_text_color, null)
-    private val keyBackgroundColor = context.resources.getColor(R.color.key_background_color, null)
-    private val keyModifierBackgroundColor = context.resources.getColor(R.color.key_background_color_modifier, null)
-
     // Scaling factors for rendering.
     private var scaleX = 1f
     private var scaleY = 1f
@@ -394,7 +388,7 @@ class CustomKeyboardView @JvmOverloads constructor(
         val keyboard = keyboard ?: return
 
         // Resolve accent color or fallback to a soft violet-purple
-        val accentColor = context.resolveThemeColor(android.R.attr.colorAccent, 0xFF6A5ACD.toInt()) // Soft purple fallback
+        val accentColor = context.resolveThemeColor(android.R.attr.colorAccent, Constants.DEFAULT_ACCENT_COLOR)
 
         // Define colors based on theme
         val isDarkTheme = try {
@@ -407,7 +401,7 @@ class CustomKeyboardView @JvmOverloads constructor(
         val keyboardBackgroundColor = if (isDarkTheme) adjustColor(accentColor, 0.2f, 0.6f) else adjustColor(accentColor, 0.99f, 0.2f)
         val keyBackgroundColor = if (isDarkTheme) adjustColor(accentColor, 0.25f, 0.4f) else adjustColor(accentColor, 1.0f, 0.1f)
         val keyModifierBackgroundColor = if (isDarkTheme) adjustColor(accentColor, 1.2f, 0.7f) else adjustColor(accentColor, 1.0f, 1.0f)
-        val keyLabelTextColor = if (isDarkTheme) 0xFFCCCCCC.toInt() else 0xFF333333.toInt()
+        val keyLabelTextColor = if (isDarkTheme) Constants.TEXT_COLOR_DARK_THEME else Constants.TEXT_COLOR_LIGHT_THEME
         val keyLabelLongPressTextColor = if (isDarkTheme) adjustColor(accentColor, 1.4f, 0.9f) else adjustColor(accentColor, 0.95f, 1.0f)
 
         // Keep those values the same as text or background colors.
@@ -463,7 +457,7 @@ class CustomKeyboardView @JvmOverloads constructor(
                         val drawable = getIconDrawable(iconName)
                         drawable?.let {
                             // TODO: add key icon / label size overrides
-                            val iconSize = (rectKeyHeight * 0.6f).toInt()
+                            val iconSize = (rectKeyHeight * Constants.TEXT_SIZE_FACTOR_ICON).toInt()
                             val iconLeft = rectKeyX.toInt() + ((rectKeyWidth - iconSize) / 2).toInt()
                             val iconTop = rectKeyY.toInt() + ((rectKeyHeight - iconSize) / 2).toInt()
                             it.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize)
@@ -483,7 +477,7 @@ class CustomKeyboardView @JvmOverloads constructor(
                             // --- Draw small label (secondary text) ---
                             key.labelLongPress.let {
                                 paint.color = if (key.isModifier == true) keyModifierSmallLabelTextColor else keyLabelLongPressTextColor
-                                paint.textSize = rectKeyHeight * 0.32f
+                                paint.textSize = rectKeyHeight * Constants.TEXT_SIZE_FACTOR_SMALL_LABEL
                                 paint.textAlign = Paint.Align.CENTER
 
                                 // Transform the small label dynamically based on meta states
@@ -494,7 +488,7 @@ class CustomKeyboardView @JvmOverloads constructor(
                                     canvas.drawText(
                                         renderedSmallLabel,
                                         keyBounds.centerX(),
-                                        keyBounds.top + rectKeyHeight * 0.35f, // Upper half position
+                                        keyBounds.top + rectKeyHeight * Constants.SMALL_LABEL_Y_POSITION_FACTOR, // Upper half position
                                         paint
                                     )
                                 }
@@ -503,7 +497,7 @@ class CustomKeyboardView @JvmOverloads constructor(
                             // --- Draw primary label (main text) ---
                             key.label?.let {
                                 paint.color = if (key.isModifier == true) keyModifierLabelTextColor else keyLabelTextColor
-                                paint.textSize = rectKeyHeight * 0.37f
+                                paint.textSize = rectKeyHeight * Constants.TEXT_SIZE_FACTOR_PRIMARY_LABEL
                                 paint.textAlign = Paint.Align.CENTER
 
                                 // Transform the label dynamically based on meta states
@@ -515,7 +509,7 @@ class CustomKeyboardView @JvmOverloads constructor(
                                 if (key.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY) {
                                     paint.textAlign = Paint.Align.LEFT
                                     // Correct the padding issue by adjusting the starting position
-                                    textX = keyBounds.left + rectKeyHeight * 0.1f // Minimal padding from the left
+                                    textX = keyBounds.left + rectKeyHeight * Constants.CLIPBOARD_KEY_PADDING_FACTOR // Minimal padding from the left
                                     key.label = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is committed
                                     renderedLabel = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is rendered
                                 }
@@ -525,7 +519,7 @@ class CustomKeyboardView @JvmOverloads constructor(
                                     canvas.drawText(
                                         renderedLabel,
                                         textX,
-                                        keyBounds.centerY() + rectKeyHeight * 0.3f, // Slightly lower in the middle half
+                                        keyBounds.centerY() + rectKeyHeight * Constants.LABEL_Y_OFFSET_FACTOR, // Slightly lower in the middle half
                                         paint
                                     )
                                 }
@@ -534,7 +528,7 @@ class CustomKeyboardView @JvmOverloads constructor(
                             // --- Draw primary label only (centered) ---
                             key.label?.let {
                                 paint.color = if (key.isModifier == true) keyModifierLabelTextColor else keyLabelTextColor
-                                paint.textSize = if (key.isModifier == true) rectKeyHeight * 0.4f else rectKeyHeight * 0.5f
+                                paint.textSize = if (key.isModifier == true) rectKeyHeight * Constants.TEXT_SIZE_FACTOR_MODIFIER_LABEL else rectKeyHeight * Constants.TEXT_SIZE_FACTOR_CENTERED_LABEL
                                 paint.textAlign = Paint.Align.CENTER
 
                                 // Transform the label dynamically based on meta states
@@ -546,7 +540,7 @@ class CustomKeyboardView @JvmOverloads constructor(
                                 if (key.keyCode == Constants.KEYCODE_CLIPBOARD_ENTRY) {
                                     paint.textAlign = Paint.Align.LEFT
                                     // Correct the padding issue by adjusting the starting position
-                                    textX = keyBounds.left + rectKeyHeight * 0.1f // Minimal padding from the left
+                                    textX = keyBounds.left + rectKeyHeight * Constants.CLIPBOARD_KEY_PADDING_FACTOR // Minimal padding from the left
                                     key.label = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is committed
                                     renderedLabel = CustomKeyboardClipboard.getClipboardEntry(key.id) ?: "" // This text is rendered
                                 }

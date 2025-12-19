@@ -48,6 +48,39 @@ class Constants {
         const val DEFAULT_RENDERED_ROW_GAP = 5f
         const val DEFAULT_KEY_CORNER_RADIUS_FACTOR = 0.1f
 
+        /**
+         * Default accent color used for rendering when theme resolution fails.
+         * Value: Soft purple (#6A5ACD)
+         */
+        const val DEFAULT_ACCENT_COLOR = 0xFF6A5ACD.toInt()
+
+        /**
+         * Default text color for dark theme rendering.
+         * Value: Light grey (#CCCCCC)
+         */
+        const val TEXT_COLOR_DARK_THEME = 0xFFCCCCCC.toInt()
+
+        /**
+         * Default text color for light theme rendering.
+         * Value: Dark grey (#333333)
+         */
+        const val TEXT_COLOR_LIGHT_THEME = 0xFF333333.toInt()
+
+        /**
+         * Margin from the top of the screen for error popups.
+         */
+        const val ERROR_POPUP_MARGIN_TOP = 50
+
+        // Rendering text size factors (relative to key height)
+        const val TEXT_SIZE_FACTOR_ICON = 0.6f
+        const val TEXT_SIZE_FACTOR_SMALL_LABEL = 0.32f
+        const val TEXT_SIZE_FACTOR_PRIMARY_LABEL = 0.37f
+        const val TEXT_SIZE_FACTOR_CENTERED_LABEL = 0.5f
+        const val TEXT_SIZE_FACTOR_MODIFIER_LABEL = 0.4f
+        const val SMALL_LABEL_Y_POSITION_FACTOR = 0.35f
+        const val LABEL_Y_OFFSET_FACTOR = 0.3f
+        const val CLIPBOARD_KEY_PADDING_FACTOR = 0.1f
+
         // Paths
         private const val APP_MEDIA_NAME = "com.roalyr.customkeyboardengine"
         private const val LAYOUTS_DIRECTORY_NAME = "layouts"

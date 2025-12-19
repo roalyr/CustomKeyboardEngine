@@ -852,9 +852,9 @@ class CustomKeyboardService : InputMethodService() {
     private fun handleFallback(layoutType: String, onFallback: (CustomKeyboard) -> Unit) {
         try {
             val fallbackLayout = when (layoutType) {
-                "Language" -> loadFallbackLanguageLayout()
-                "Service" -> loadFallbackServiceLayout()
-                "Clipboard" -> loadFallbackClipboardLayout()
+                "Language" -> loadFallbackLayout(R.raw.keyboard_default, "language")
+                "Service" -> loadFallbackLayout(R.raw.keyboard_service, "service")
+                "Clipboard" -> loadFallbackLayout(R.raw.keyboard_clipboard_default, "clipboard")
                 else -> throw IllegalArgumentException("Unknown layout type: $layoutType")
             }
             onFallback(fallbackLayout)
@@ -865,40 +865,21 @@ class CustomKeyboardService : InputMethodService() {
     }
 
 
-    private fun loadFallbackLanguageLayout(): CustomKeyboard {
+    /**
+     * Loads a fallback keyboard layout from raw resources.
+     *
+     * @param resourceId The raw resource ID of the JSON layout.
+     * @param layoutName A descriptive name for the layout (used in error messages).
+     * @return A [CustomKeyboard] instance parsed from the resource.
+     * @throws Exception if parsing fails or the resulting layout is null.
+     */
+    private fun loadFallbackLayout(resourceId: Int, layoutName: String): CustomKeyboard {
         return try {
-            val json = resources.openRawResource(R.raw.keyboard_default).bufferedReader().use { it.readText() }
-            CustomKeyboard.fromJson(this, json, settings).also {
-                //Log.i(TAG, "Fallback language layout loaded successfully.")
-            } ?: throw Exception("Parsed fallback language layout is null")
+            val json = resources.openRawResource(resourceId).bufferedReader().use { it.readText() }
+            CustomKeyboard.fromJson(this, json, settings)
+                ?: throw Exception("Parsed fallback $layoutName layout is null")
         } catch (e: Exception) {
-            val errorMsg = "Error loading fallback layout: ${e.message}"
-            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-            throw e
-        }
-    }
-
-    private fun loadFallbackServiceLayout(): CustomKeyboard {
-        return try {
-            val json = resources.openRawResource(R.raw.keyboard_service).bufferedReader().use { it.readText() }
-            CustomKeyboard.fromJson(this, json, settings).also {
-                //Log.i(TAG, "Fallback service layout loaded successfully.")
-            } ?: throw Exception("Parsed fallback service layout is null")
-        } catch (e: Exception) {
-            val errorMsg = "Error loading fallback layout: ${e.message}"
-            ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
-            throw e
-        }
-    }
-
-    private fun loadFallbackClipboardLayout(): CustomKeyboard {
-        return try {
-            val json = resources.openRawResource(R.raw.keyboard_clipboard_default).bufferedReader().use { it.readText() }
-            CustomKeyboard.fromJson(this, json, settings).also {
-                //Log.i(TAG, "Fallback service layout loaded successfully.")
-            } ?: throw Exception("Parsed fallback clipboard layout is null")
-        } catch (e: Exception) {
-            val errorMsg = "Error loading fallback layout: ${e.message}"
+            val errorMsg = "Error loading fallback $layoutName layout: ${e.message}"
             ClassFunctionsPopups.showErrorPopup(windowManager, this, TAG, errorMsg)
             throw e
         }

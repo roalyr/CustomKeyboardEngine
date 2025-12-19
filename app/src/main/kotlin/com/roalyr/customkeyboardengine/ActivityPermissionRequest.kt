@@ -12,6 +12,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 
+/**
+ * Transparent activity used to request system permissions (Overlay and Storage).
+ * This activity handles the intent-based permission requests and provides feedback via Toasts.
+ */
 class ActivityPermissionRequest : AppCompatActivity() {
 
     companion object {
@@ -34,7 +38,7 @@ class ActivityPermissionRequest : AppCompatActivity() {
             Constants.PermissionTypes.STORAGE -> requestStoragePermissions()
             else -> {
                 Log.e(TAG, "Unknown permission type: $permissionType")
-                Toast.makeText(this, "Unknown permission type.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.error_unknown_permission), Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
@@ -57,7 +61,7 @@ class ActivityPermissionRequest : AppCompatActivity() {
             )
         } else {
             //Log.i(TAG, "Storage permission not required for Android 10+")
-            Toast.makeText(this, "Storage permission not required for Android 10+.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.info_storage_not_required), Toast.LENGTH_SHORT).show()
             finish()
         }
     }

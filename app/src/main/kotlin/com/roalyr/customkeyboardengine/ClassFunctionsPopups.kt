@@ -9,6 +9,10 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 
+/**
+ * Utility class for displaying system-wide overlay popups.
+ * Primarily used for showing error notifications that persist across different apps.
+ */
 class ClassFunctionsPopups {
     companion object {
         private var errorPopupView: View? = null
@@ -45,7 +49,7 @@ class ClassFunctionsPopups {
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.CENTER or Gravity.CENTER_HORIZONTAL // Position at the center
-                y = 50 // Optional: Add some margin from the top edge
+                y = Constants.ERROR_POPUP_MARGIN_TOP // Optional: Add some margin from the top edge
             }
 
             try {

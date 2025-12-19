@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -38,6 +39,10 @@ import androidx.compose.ui.unit.sp
 import com.roalyr.customkeyboardengine.ui.theme.CustomKeyboardEngineTheme
 import java.io.File
 
+/**
+ * Main activity for the Custom Keyboard Engine.
+ * Provides a UI for granting permissions, changing input methods, and copying default layouts/settings.
+ */
 class ActivityMain : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,7 +77,7 @@ class ActivityMain : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.medium
                         ) {
-                            Text("1. Grant Storage Permission")
+                            Text(stringResource(R.string.btn_grant_storage))
                         }
 
                         Button(
@@ -80,7 +85,7 @@ class ActivityMain : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.medium
                         ) {
-                            Text("2. Grant Overlay Permission")
+                            Text(stringResource(R.string.btn_grant_overlay))
                         }
 
                         Button(
@@ -88,7 +93,7 @@ class ActivityMain : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.medium
                         ) {
-                            Text("3. Change Input Method")
+                            Text(stringResource(R.string.btn_change_input))
                         }
 
                         Button(
@@ -96,7 +101,7 @@ class ActivityMain : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.medium
                         ) {
-                            Text("4. Copy (rewrite) default layouts and reference manual to working folder")
+                            Text(stringResource(R.string.btn_copy_defaults))
                         }
 
                         Button(
@@ -104,12 +109,12 @@ class ActivityMain : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.medium
                         ) {
-                            Text("5. Copy (rewrite) default settings.json to working folder")
+                            Text(stringResource(R.string.btn_copy_settings))
                         }
 
                         // Path Reference
                         Text(
-                            text = "📂 Working Directory Path:",
+                            text = stringResource(R.string.label_working_dir),
                             color = MaterialTheme.colorScheme.primary,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
@@ -125,7 +130,7 @@ class ActivityMain : ComponentActivity() {
                                 .fillMaxWidth()
                         ) {
                             Text(
-                                text = "/storage/emulated/0/Android/media/com.roalyr.customkeyboardengine/",
+                                text = stringResource(R.string.working_dir_path),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
                                 fontFamily = FontFamily.Monospace,
@@ -135,8 +140,7 @@ class ActivityMain : ComponentActivity() {
 
                         // Hint Messages
                         Text(
-                            text = "ℹ️ HINT: Look for `.json` files in the directory above. " +
-                                    "You can edit them using any external text editor. Refer to `${Constants.REFERENCE_DEFAULT}` in the folder for more information.",
+                            text = stringResource(R.string.hint_json_files),
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Normal,
@@ -145,8 +149,7 @@ class ActivityMain : ComponentActivity() {
                         )
 
                         Text(
-                            text = "ℹ️ HINT: If the directory is not created automatically, " +
-                                    "create it manually and restart the app.",
+                            text = stringResource(R.string.hint_directory),
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Normal,
@@ -156,7 +159,7 @@ class ActivityMain : ComponentActivity() {
 
                         // Warning Message
                         Text(
-                            text = "⚠️ IMPORTANT: Backup files in the directory above to prevent data loss before uninstalling the app.",
+                            text = stringResource(R.string.warning_backup),
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
@@ -169,7 +172,7 @@ class ActivityMain : ComponentActivity() {
                         androidx.compose.material3.TextField(
                             value = text.value,
                             onValueChange = { text.value = it },
-                            placeholder = { Text("Type here to test keyboard...") },
+                            placeholder = { Text(stringResource(R.string.hint_test_input)) },
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -179,7 +182,7 @@ class ActivityMain : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.medium
                         ) {
-                            Text("Visit GitHub Page")
+                            Text(stringResource(R.string.btn_github))
                         }
 
                         Spacer(modifier = Modifier.height(16.dp)) // Add space at the bottom
@@ -211,7 +214,7 @@ class ActivityMain : ComponentActivity() {
 
     private fun copyDefaults() {
         if (ClassFunctionsFiles.ensureMediaDirectoriesExistAndCopyDefaults(windowManager, this, resources)){
-            Toast.makeText(this, "Default layouts and reference copied", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_defaults_copied), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -227,7 +230,7 @@ class ActivityMain : ComponentActivity() {
     private fun copyDefaultSettings() {
         val appDir = File(Constants.MEDIA_APP_DIRECTORY)
         if (!appDir.exists() && !appDir.mkdirs()) {
-            Toast.makeText(this, "Failed to create working folder", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_folder_failed), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -238,9 +241,9 @@ class ActivityMain : ComponentActivity() {
                     inputStream.copyTo(outputStream)
                 }
             }
-            Toast.makeText(this, "Default settings.json copied", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_settings_copied), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "Failed to copy settings.json: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_settings_failed, e.message), Toast.LENGTH_SHORT).show()
         }
     }
 }

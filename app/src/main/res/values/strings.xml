@@ -1,3 +1,31 @@
 <resources>
     <string name="app_name">CustomKeyboardEngine</string>
+
+    <!-- Buttons -->
+    <string name="btn_grant_storage">1. Grant Storage Permission</string>
+    <string name="btn_grant_overlay">2. Grant Overlay Permission</string>
+    <string name="btn_change_input">3. Change Input Method</string>
+    <string name="btn_copy_defaults">4. Copy (rewrite) default layouts and reference manual to working folder</string>
+    <string name="btn_copy_settings">5. Copy (rewrite) default settings.json to working folder</string>
+    <string name="btn_github">Visit GitHub Page</string>
+
+    <!-- Labels -->
+    <string name="label_working_dir">📂 Working Directory Path:</string>
+    <string name="working_dir_path">/storage/emulated/0/Android/media/com.roalyr.customkeyboardengine/</string>
+
+    <!-- Hints -->
+    <string name="hint_json_files">ℹ️ HINT: Look for .json files in the directory above. You can edit them using any external text editor. Refer to reference.md in the folder for more information.</string>
+    <string name="hint_directory">ℹ️ HINT: If the directory is not created automatically, create it manually and restart the app.</string>
+    <string name="hint_test_input">Type here to test keyboard…</string>
+
+    <!-- Warnings -->
+    <string name="warning_backup">⚠️ IMPORTANT: Backup files in the directory above to prevent data loss before uninstalling the app.</string>
+
+    <!-- Toasts -->
+    <string name="toast_defaults_copied">Default layouts and reference copied</string>
+    <string name="toast_settings_copied">Default settings.json copied</string>
+    <string name="toast_settings_failed">Failed to copy settings.json: %1$s</string>
+    <string name="toast_folder_failed">Failed to create working folder</string>
+    <string name="error_unknown_permission">Unknown permission type.</string>
+    <string name="info_storage_not_required">Storage permission not required for Android 10+.</string>
 </resources>

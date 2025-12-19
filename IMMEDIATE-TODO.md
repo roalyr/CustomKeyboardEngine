@@ -33,7 +33,7 @@ This sprint focuses on code quality without changing functionality.
 ## 3. ATOMIC TASKS
 
 ### Task 1: Extract UI Strings to Resources (HIGH PRIORITY)
-- [ ] **1.1 Add string resources to strings.xml**
+- [x] **1.1 Add string resources to strings.xml**
   - **TARGET FILE:** `app/src/main/res/values/strings.xml`
   - **DEPENDENCIES:** None
   - **CONTENT TO ADD:**
@@ -68,7 +68,7 @@ This sprint focuses on code quality without changing functionality.
     ```
   - **SUCCESS CRITERIA:** All strings compile without errors
 
-- [ ] **1.2 Update ActivityMain.kt to use string resources**
+- [x] **1.2 Update ActivityMain.kt to use string resources**
   - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/ActivityMain.kt`
   - **DEPENDENCIES:** Task 1.1
   - **CHANGES:**
@@ -77,7 +77,7 @@ This sprint focuses on code quality without changing functionality.
     - For Toast messages, use `getString(R.string.xxx)` or format with `getString(R.string.xxx, arg)`
   - **SUCCESS CRITERIA:** No hardcoded UI strings remain in ActivityMain.kt
 
-- [ ] **1.3 Update ActivityPermissionRequest.kt to use string resources**
+- [x] **1.3 Update ActivityPermissionRequest.kt to use string resources**
   - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/ActivityPermissionRequest.kt`
   - **DEPENDENCIES:** Task 1.1
   - **CHANGES:**
@@ -88,7 +88,7 @@ This sprint focuses on code quality without changing functionality.
 ---
 
 ### Task 2: Extract Color Constants (HIGH PRIORITY)
-- [ ] **2.1 Add color constants to Constants.kt**
+- [x] **2.1 Add color constants to Constants.kt**
   - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/Constants.kt`
   - **DEPENDENCIES:** None
   - **CONTENT TO ADD (inside companion object):**
@@ -103,7 +103,7 @@ This sprint focuses on code quality without changing functionality.
     ```
   - **SUCCESS CRITERIA:** Constants compile successfully
 
-- [ ] **2.2 Update CustomKeyboardView.kt to use color constants**
+- [x] **2.2 Update CustomKeyboardView.kt to use color constants**
   - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardView.kt`
   - **DEPENDENCIES:** Task 2.1
   - **CHANGES:**
@@ -112,7 +112,7 @@ This sprint focuses on code quality without changing functionality.
     - Line ~410: Replace `0xFF333333.toInt()` with `Constants.TEXT_COLOR_LIGHT_THEME`
   - **SUCCESS CRITERIA:** No hardcoded color values in onDraw()
 
-- [ ] **2.3 Update ClassFunctionsPopups.kt to use margin constant**
+- [x] **2.3 Update ClassFunctionsPopups.kt to use margin constant**
   - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/ClassFunctionsPopups.kt`
   - **DEPENDENCIES:** Task 2.1
   - **CHANGES:**
@@ -122,7 +122,7 @@ This sprint focuses on code quality without changing functionality.
 ---
 
 ### Task 3: Remove Unused Code (MEDIUM PRIORITY)
-- [ ] **3.1 Remove unused color fields in CustomKeyboardView.kt**
+- [x] **3.1 Remove unused color fields in CustomKeyboardView.kt**
   - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardView.kt`
   - **DEPENDENCIES:** None
   - **LINES TO REMOVE (~37-40):**
@@ -137,7 +137,7 @@ This sprint focuses on code quality without changing functionality.
 ---
 
 ### Task 4: Consolidate Duplicate Code (MEDIUM PRIORITY)
-- [ ] **4.1 Consolidate fallback layout loading methods**
+- [x] **4.1 Consolidate fallback layout loading methods**
   - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardService.kt`
   - **DEPENDENCIES:** None
   - **REFACTOR:**
@@ -166,7 +166,7 @@ This sprint focuses on code quality without changing functionality.
 ---
 
 ### Task 5: Add Rendering Factor Constants (LOW PRIORITY - OPTIONAL)
-- [ ] **5.1 Add text size factor constants to Constants.kt**
+- [x] **5.1 Add text size factor constants to Constants.kt**
   - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/Constants.kt`
   - **DEPENDENCIES:** None
   - **CONTENT TO ADD:**
@@ -183,7 +183,7 @@ This sprint focuses on code quality without changing functionality.
     ```
   - **SUCCESS CRITERIA:** Constants defined and ready for use
 
-- [ ] **5.2 Update CustomKeyboardView.kt to use rendering constants**
+- [x] **5.2 Update CustomKeyboardView.kt to use rendering constants**
   - **TARGET FILE:** `app/src/main/kotlin/com/roalyr/customkeyboardengine/CustomKeyboardView.kt`
   - **DEPENDENCIES:** Task 5.1
   - **CHANGES:** Replace all magic float values in onDraw() with Constants references
